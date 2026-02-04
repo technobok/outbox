@@ -1,0 +1,48 @@
+[server]
+SECRET_KEY = change-this-to-a-random-string
+DEBUG = false
+# Production settings (make run)
+HOST = 0.0.0.0
+PORT = 5200
+# Development settings (make rundev)
+DEV_HOST = 127.0.0.1
+DEV_PORT = 5200
+
+[database]
+PATH = instance/outbox.sqlite3
+
+[mail]
+SMTP_SERVER = smtp.example.com
+SMTP_PORT = 587
+SMTP_USE_TLS = true
+SMTP_USERNAME =
+SMTP_PASSWORD =
+MAIL_DEFAULT_SENDER = noreply@example.com
+
+[queue]
+POLL_INTERVAL = 5
+MAX_RETRIES = 5
+RETRY_BASE_SECONDS = 120
+RETRY_MAX_SECONDS = 3600
+BATCH_SIZE = 10
+
+[retention]
+DAYS = 30
+
+[blobs]
+DIRECTORY = instance/blobs
+MAX_SIZE_MB = 25
+
+[auth]
+GATEKEEPER_SECRET_KEY =
+GATEKEEPER_DB_PATH =
+# OR for remote mode:
+# GATEKEEPER_URL = https://auth.example.com
+# GATEKEEPER_API_KEY = gk_...
+
+# Enable when running behind a reverse proxy (Caddy, nginx, etc.)
+#[proxy]
+#X_FORWARDED_FOR = 1
+#X_FORWARDED_PROTO = 1
+#X_FORWARDED_HOST = 1
+#X_FORWARDED_PREFIX = 0

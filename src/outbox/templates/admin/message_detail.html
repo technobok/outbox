@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Message {{ message.uuid[:8] }} - Outbox{% endblock %}
+
+{% block content %}
+<h1>Message Detail</h1>
+
+<article>
+    <div class="grid">
+        <div>
+            <strong>UUID:</strong> <code>{{ message.uuid }}</code>
+        </div>
+        <div>
+            <strong>Status:</strong> <span class="badge badge-{{ message.status }}">{{ message.status }}</span>
+        </div>
+    </div>
+
+    <div class="grid" style="margin-top: 1rem;">
+        <div>
+            <strong>From:</strong> {{ message.from_address }}
+        </div>
+        <div>
+            <strong>Type:</strong> {{ message.delivery_type }} / {{ message.body_type }}
+        </div>
+    </div>
+
+    <div style="margin-top: 0.5rem;">
+        <strong>To:</strong> {{ message.to_list() | join(', ') }}
+    </div>
+    {% if message.cc_list() %}
+    <div>
+        <strong>Cc:</strong> {{ message.cc_list() | join(', ') }}
+    </div>
+    {% endif %}
+    {% if message.bcc_list() %}
+    <div>
+        <strong>Bcc:</strong> {{ message.bcc_list() | join(', ') }}
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 0.5rem;">
+        <strong>Subject:</strong> {{ message.subject or '(no subject)' }}
+    </div>
+
+    <details style="margin-top: 1rem;">
+        <summary>Body</summary>
+        <pre style="white-space: pre-wrap; word-wrap: break-word;">{{ message.body }}</pre>
+    </details>
+
+    <div class="grid" style="margin-top: 1rem;">
+        <div>
+            <strong>Created:</strong> {{ message.created_at | localdatetime }}
+        </div>
+        <div>
+            <strong>Updated:</strong> {{ message.updated_at | localdatetime }}
+        </div>
+        <div>
+            <strong>Sent:</strong> {{ message.sent_at | localdatetime or 'Not yet' }}
+        </div>
+    </div>
+
+    <div class="grid" style="margin-top: 0.5rem;">
+        <div>
+            <strong>Retries remaining:</strong> {{ message.retries_remaining }}
+        </div>
+        <div>
+            <strong>Next retry:</strong> {{ message.next_retry_at | localdatetime or 'N/A' }}
+        </div>
+        <div>
+            <strong>Source:</strong> {{ message.source_app or 'N/A' }}
+        </div>
+    </div>
+
+    {% if message.last_error %}
+    <div style="margin-top: 1rem;">
+        <strong>Last error:</strong>
+        <pre style="white-space: pre-wrap; color: var(--pico-del-color);">{{ message.last_error }}</pre>
+    </div>
+    {% endif %}
+
+    {% if attachments %}
+    <div style="margin-top: 1rem;">
+        <strong>Attachments:</strong>
+        <ul>
+            {% for att in attachments %}
+            <li>{{ att.filename }} ({{ att.content_type }}, {{ att.size_bytes }} bytes)</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <footer>
+        <div role="group">
+            {% if message.status in ('failed', 'dead') %}
+            <form method="post" action="{{ url_for('admin_queue.retry', msg_uuid=message.uuid) }}" style="display:inline;">
+                <button type="submit">Retry</button>
+            </form>
+            {% endif %}
+            {% if message.status == 'queued' %}
+            <form method="post" action="{{ url_for('admin_queue.cancel', msg_uuid=message.uuid) }}" style="display:inline;">
+                <button type="submit" class="contrast">Cancel</button>
+            </form>
+            {% endif %}
+            <a role="button" class="outline" href="{{ url_for('admin_queue.index') }}">Back to Queue</a>
+        </div>
+    </footer>
+</article>
+{% endblock %}

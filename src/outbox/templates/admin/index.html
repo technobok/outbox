@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Outbox{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="grid">
+    <article>
+        <header>Total</header>
+        <p class="stat-number">{{ stats.get('total', 0) }}</p>
+    </article>
+    <article>
+        <header>Queued</header>
+        <p class="stat-number">{{ stats.get('queued', 0) }}</p>
+    </article>
+    <article>
+        <header>Sending</header>
+        <p class="stat-number">{{ stats.get('sending', 0) }}</p>
+    </article>
+    <article>
+        <header>Sent</header>
+        <p class="stat-number">{{ stats.get('sent', 0) }}</p>
+    </article>
+    <article>
+        <header>Failed</header>
+        <p class="stat-number">{{ stats.get('failed', 0) }}</p>
+    </article>
+    <article>
+        <header>Dead</header>
+        <p class="stat-number">{{ stats.get('dead', 0) }}</p>
+    </article>
+</div>
+
+<div class="grid">
+    <a href="{{ url_for('admin_queue.index') }}" style="text-decoration: none; color: inherit;">
+        <article>
+            <header>Queue</header>
+            <p>Browse, search, retry, and cancel messages in the delivery queue.</p>
+        </article>
+    </a>
+    <a href="{{ url_for('admin_keys.index') }}" style="text-decoration: none; color: inherit;">
+        <article>
+            <header>API Keys</header>
+            <p>Generate, toggle, and delete API keys for service authentication.</p>
+        </article>
+    </a>
+    <a href="{{ url_for('admin_sql.index') }}" style="text-decoration: none; color: inherit;">
+        <article>
+            <header>SQL</header>
+            <p>Run SQL queries against the database with schema reference.</p>
+        </article>
+    </a>
+</div>
+{% endblock %}

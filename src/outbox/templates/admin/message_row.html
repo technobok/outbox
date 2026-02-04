@@ -1,0 +1,29 @@
+<tr>
+    <td><span class="badge badge-{{ msg.status }}">{{ msg.status }}</span></td>
+    <td>{{ msg.to_list() | join(', ') | truncate(40) }}</td>
+    <td><a href="{{ url_for('admin_queue.detail', msg_uuid=msg.uuid) }}">{{ msg.subject | truncate(50) or '(no subject)' }}</a></td>
+    <td>{{ msg.source_app or '' }}</td>
+    <td>{{ msg.created_at | localdatetime }}</td>
+    <td>
+        <div role="group">
+            <a role="button" class="outline" href="{{ url_for('admin_queue.detail', msg_uuid=msg.uuid) }}">View</a>
+            {% if msg.status in ('failed', 'dead') %}
+            <button class="outline"
+                    hx-post="{{ url_for('admin_queue.retry', msg_uuid=msg.uuid) }}"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML">
+                Retry
+            </button>
+            {% endif %}
+            {% if msg.status == 'queued' %}
+            <button class="outline contrast"
+                    hx-post="{{ url_for('admin_queue.cancel', msg_uuid=msg.uuid) }}"
+                    hx-confirm="Cancel this message?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML">
+                Cancel
+            </button>
+            {% endif %}
+        </div>
+    </td>
+</tr>

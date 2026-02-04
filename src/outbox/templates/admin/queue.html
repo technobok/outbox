@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Queue - Outbox{% endblock %}
+
+{% block content %}
+<h1>Message Queue</h1>
+
+<div class="grid">
+    <article>
+        <header>Queued</header>
+        <p class="stat-number">{{ stats.get('queued', 0) }}</p>
+    </article>
+    <article>
+        <header>Sending</header>
+        <p class="stat-number">{{ stats.get('sending', 0) }}</p>
+    </article>
+    <article>
+        <header>Failed</header>
+        <p class="stat-number">{{ stats.get('failed', 0) }}</p>
+    </article>
+    <article>
+        <header>Sent</header>
+        <p class="stat-number">{{ stats.get('sent', 0) }}</p>
+    </article>
+</div>
+
+<form method="get" action="{{ url_for('admin_queue.index') }}">
+    <fieldset role="group">
+        <input type="text" name="search" placeholder="Search by subject, recipient, UUID..."
+               value="{{ search }}">
+        <select name="status">
+            <option value="">All statuses</option>
+            <option value="queued"{% if status == 'queued' %} selected{% endif %}>Queued</option>
+            <option value="sending"{% if status == 'sending' %} selected{% endif %}>Sending</option>
+            <option value="sent"{% if status == 'sent' %} selected{% endif %}>Sent</option>
+            <option value="failed"{% if status == 'failed' %} selected{% endif %}>Failed</option>
+            <option value="dead"{% if status == 'dead' %} selected{% endif %}>Dead</option>
+            <option value="cancelled"{% if status == 'cancelled' %} selected{% endif %}>Cancelled</option>
+        </select>
+        <button type="submit">Filter</button>
+    </fieldset>
+</form>
+
+<figure>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>To</th>
+                <th>Subject</th>
+                <th>Source</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for msg in messages %}
+            {% include "admin/message_row.html" %}
+            {% else %}
+            <tr>
+                <td colspan="6"><em>No messages found.</em></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</figure>
+
+{% if total_pages > 1 %}
+<nav>
+    <ul>
+        {% if page > 1 %}
+        <li><a href="{{ url_for('admin_queue.index', page=page-1, status=status, search=search) }}">Previous</a></li>
+        {% endif %}
+        <li><small>Page {{ page }} of {{ total_pages }} ({{ total }} messages)</small></li>
+        {% if page < total_pages %}
+        <li><a href="{{ url_for('admin_queue.index', page=page+1, status=status, search=search) }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

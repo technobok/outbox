@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5200:5200"
+    volumes:
+      - ./instance:/app/instance
+      - ./config.ini:/app/config.ini:ro
+    environment:
+      - OUTBOX_ROOT=/app
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["python", "-m", "worker.queue_worker"]
+    volumes:
+      - ./instance:/app/instance
+      - ./config.ini:/app/config.ini:ro
+    environment:
+      - OUTBOX_ROOT=/app
+    restart: unless-stopped
+    depends_on:
+      - web
