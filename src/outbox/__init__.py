@@ -73,23 +73,27 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     # Initialize gatekeeper_client
     gk_secret = app.config["GATEKEEPER_SECRET_KEY"]
-    if gk_secret:
+    gk_db_path = app.config["GATEKEEPER_DB_PATH"]
+    gk_url = app.config["GATEKEEPER_URL"]
+    gk_api_key = app.config["GATEKEEPER_API_KEY"]
+
+    gk = None
+    if gk_db_path and gk_secret:
+        # Local mode requires secret_key
         from gatekeeper_client import GatekeeperClient
 
-        gk_db_path = app.config["GATEKEEPER_DB_PATH"]
-        gk_url = app.config["GATEKEEPER_URL"]
-        gk_api_key = app.config["GATEKEEPER_API_KEY"]
+        gk = GatekeeperClient(secret_key=gk_secret, db_path=gk_db_path)
+    elif gk_url and gk_api_key:
+        # HTTP mode - secret_key is optional (verifies via API if not provided)
+        from gatekeeper_client import GatekeeperClient
 
-        if gk_db_path:
-            gk = GatekeeperClient(secret_key=gk_secret, db_path=gk_db_path)
-        elif gk_url and gk_api_key:
-            gk = GatekeeperClient(secret_key=gk_secret, server_url=gk_url, api_key=gk_api_key)
-        else:
-            gk = None
+        gk = GatekeeperClient(
+            secret_key=gk_secret or None, server_url=gk_url, api_key=gk_api_key
+        )
 
-        if gk:
-            gk.init_app(app, cookie_name="gk_session")
-            app.config["GATEKEEPER_CLIENT"] = gk
+    if gk:
+        gk.init_app(app, cookie_name="gk_session")
+        app.config["GATEKEEPER_CLIENT"] = gk
 
     # Register blueprints
     from outbox.blueprints import admin, admin_keys, admin_queue, admin_sql, api, auth
