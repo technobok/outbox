@@ -54,6 +54,12 @@ def init_db() -> None:
         for _ in db.execute(f.read()):
             pass
 
+    # Generate secret_key if not exists (for session signing)
+    from outbox.models.app_setting import AppSetting
+
+    if not AppSetting.get("secret_key"):
+        AppSetting.rotate_secret_key()
+
 
 @click.command("init-db")
 def init_db_command() -> None:

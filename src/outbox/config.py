@@ -17,8 +17,6 @@ def load_config(app, instance_path: Path, project_root: Path) -> None:
     config.read(config_path)
 
     if config.has_section("server"):
-        if config.has_option("server", "SECRET_KEY"):
-            app.config["SECRET_KEY"] = config.get("server", "SECRET_KEY")
         if config.has_option("server", "HOST"):
             app.config["HOST"] = config.get("server", "HOST")
         if config.has_option("server", "PORT"):
@@ -67,9 +65,6 @@ def load_config(app, instance_path: Path, project_root: Path) -> None:
         app.config["BLOB_MAX_SIZE_MB"] = config.getint("blobs", "MAX_SIZE_MB", fallback=25)
 
     if config.has_section("auth"):
-        app.config["GATEKEEPER_SECRET_KEY"] = config.get(
-            "auth", "GATEKEEPER_SECRET_KEY", fallback=""
-        )
         app.config["GATEKEEPER_DB_PATH"] = config.get("auth", "GATEKEEPER_DB_PATH", fallback="")
         app.config["GATEKEEPER_URL"] = config.get("auth", "GATEKEEPER_URL", fallback="")
         app.config["GATEKEEPER_API_KEY"] = config.get("auth", "GATEKEEPER_API_KEY", fallback="")

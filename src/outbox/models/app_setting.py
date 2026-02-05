@@ -37,3 +37,17 @@ class AppSetting:
         return [
             (str(row[0]), str(row[1]), str(row[2]) if row[2] is not None else None) for row in rows
         ]
+
+    @staticmethod
+    def get_secret_key() -> str:
+        """Get the SECRET_KEY used for token signing."""
+        return AppSetting.get("secret_key") or ""
+
+    @staticmethod
+    def rotate_secret_key() -> str:
+        """Generate and store a new SECRET_KEY. Invalidates all sessions."""
+        import secrets
+
+        new_key = secrets.token_urlsafe(32)
+        AppSetting.set("secret_key", new_key, "Secret key for signing sessions")
+        return new_key

@@ -53,9 +53,8 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         BLOB_DIRECTORY=str(instance_path / "blobs"),
         BLOB_MAX_SIZE_MB=25,
         # Gatekeeper auth
-        GATEKEEPER_SECRET_KEY="",
-        GATEKEEPER_DB_PATH="",
-        GATEKEEPER_URL="",
+        GATEKEEPER_DB_PATH="",  # Local mode
+        GATEKEEPER_URL="",  # HTTP mode
         GATEKEEPER_API_KEY="",
     )
 
@@ -72,26 +71,22 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.cli.add_command(init_db_command)
 
     # Initialize gatekeeper_client
-    gk_secret = app.config["GATEKEEPER_SECRET_KEY"]
     gk_db_path = app.config["GATEKEEPER_DB_PATH"]
     gk_url = app.config["GATEKEEPER_URL"]
     gk_api_key = app.config["GATEKEEPER_API_KEY"]
 
-    gk = None
-    if gk_db_path and gk_secret:
-        # Local mode requires secret_key
+    if gk_db_path:
+        # Local mode - reads secret_key directly from gatekeeper database
         from gatekeeper_client import GatekeeperClient
 
-        gk = GatekeeperClient(secret_key=gk_secret, db_path=gk_db_path)
+        gk = GatekeeperClient(db_path=gk_db_path)
+        gk.init_app(app, cookie_name="gk_session")
+        app.config["GATEKEEPER_CLIENT"] = gk
     elif gk_url and gk_api_key:
-        # HTTP mode - secret_key is optional (verifies via API if not provided)
+        # HTTP mode
         from gatekeeper_client import GatekeeperClient
 
-        gk = GatekeeperClient(
-            secret_key=gk_secret or None, server_url=gk_url, api_key=gk_api_key
-        )
-
-    if gk:
+        gk = GatekeeperClient(server_url=gk_url, api_key=gk_api_key)
         gk.init_app(app, cookie_name="gk_session")
         app.config["GATEKEEPER_CLIENT"] = gk
 
@@ -151,5 +146,18 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         from flask import redirect, url_for
 
         return redirect(url_for("admin.index"))
+
+    # Load SECRET_KEY from database
+    with app.app_context():
+        from outbox.db import get_db
+        from outbox.models.app_setting import AppSetting
+
+        try:
+            get_db().execute("SELECT 1 FROM app_setting LIMIT 0").fetchone()
+            db_secret_key = AppSetting.get_secret_key()
+            if db_secret_key:
+                app.config["SECRET_KEY"] = db_secret_key
+        except Exception:
+            pass  # Database not initialized yet
 
     return app

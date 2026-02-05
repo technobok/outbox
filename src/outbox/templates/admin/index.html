@@ -51,4 +51,15 @@
         </article>
     </a>
 </div>
+
+<h2>System</h2>
+<h3>Secret Key</h3>
+<p>Used for signing sessions. Rotating invalidates all sessions.</p>
+<pre style="user-select: all; cursor: pointer;" title="Click to select">{{ secret_key }}</pre>
+<form method="post" action="{{ url_for('admin.rotate_secret_key') }}">
+    <button type="submit" class="secondary"
+            onclick="return confirm('This will invalidate ALL sessions. Continue?')">
+        Rotate Secret Key
+    </button>
+</form>
 {% endblock %}
