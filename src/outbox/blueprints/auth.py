@@ -80,7 +80,7 @@ def login():
         return render_template("auth/login.html", next_url=next_url)
 
     callback_url = url_for("auth.callback", _external=True)
-    sent = gk.send_magic_link(identifier, callback_url, redirect_url=next_url)
+    sent = gk.send_magic_link(identifier, callback_url, redirect_url=next_url, app_name="Outbox")
 
     if not sent:
         logger.warning(f"Failed to send magic link for identifier: {identifier}")
