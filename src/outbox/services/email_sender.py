@@ -13,6 +13,14 @@ from outbox.models.attachment import Attachment
 from outbox.models.message import Message
 
 
+def _try_login(server: smtplib.SMTP, username: str, password: str) -> None:
+    """Attempt SMTP login only if the server supports AUTH."""
+    if not username or not password:
+        return
+    if server.has_extn("auth"):
+        server.login(username, password)
+
+
 def send_message(message: Message) -> None:
     """Send a message via SMTP.
 
@@ -55,13 +63,11 @@ def send_message(message: Message) -> None:
     if smtp_use_tls:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
-            if smtp_username:
-                server.login(smtp_username, smtp_password)
+            _try_login(server, smtp_username, smtp_password)
             server.sendmail(message.from_address, all_recipients, msg.as_string())
     else:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
-            if smtp_username:
-                server.login(smtp_username, smtp_password)
+            _try_login(server, smtp_username, smtp_password)
             server.sendmail(message.from_address, all_recipients, msg.as_string())
 
 
