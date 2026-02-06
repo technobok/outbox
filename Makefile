@@ -1,4 +1,4 @@
-.PHONY: help sync install init-db run rundev worker check clean
+.PHONY: help sync install init-db bootstrap-key run rundev worker check clean
 
 SHELL := /bin/bash
 VENV_DIR := $(or $(VIRTUAL_ENV),.venv)
@@ -14,6 +14,8 @@ help:
 	@echo "sync     - Sync dependencies with uv (creates venv if needed)"
 	@echo "install  - Alias for sync"
 	@echo "init-db  - Create a blank database"
+	@echo "bootstrap-key [DESC=description]"
+	@echo "           - Generate an API key for service bootstrap (prints to console)"
 	@echo "run      - Run server via gunicorn (0.0.0.0:5200)"
 	@echo "rundev   - Run Flask dev server (DEV_HOST:DEV_PORT, debug=True)"
 	@echo "worker   - Run the queue worker process"
@@ -27,6 +29,9 @@ install: sync
 
 init-db:
 	@$(FLASK) --app wsgi init-db
+
+bootstrap-key:
+	@$(FLASK) --app wsgi generate-api-key --description "$(or $(DESC),bootstrap)"
 
 run:
 	@$(GUNICORN) wsgi:app --bind 0.0.0.0:5200 --workers 2 --preload

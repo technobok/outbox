@@ -70,6 +70,17 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
 
+    import click
+
+    @app.cli.command("generate-api-key")
+    @click.option("--description", "-d", default="", help="Description for the API key")
+    def generate_api_key_command(description: str) -> None:
+        """Generate a new API key and print it to the console."""
+        from outbox.models.api_key import ApiKey
+
+        api_key = ApiKey.generate(description=description)
+        click.echo(api_key.key)
+
     # Initialize gatekeeper_client
     gk_db_path = app.config["GATEKEEPER_DB_PATH"]
     gk_url = app.config["GATEKEEPER_URL"]
