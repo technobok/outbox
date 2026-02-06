@@ -23,6 +23,14 @@
     </article>
 </div>
 
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <div></div>
+    <button type="button" class="secondary outline"
+            onclick="location.href='{{ url_for('admin_queue.export', status=status, search=search) }}'">
+        Export
+    </button>
+</div>
+
 <form method="get" action="{{ url_for('admin_queue.index') }}">
     <fieldset role="group">
         <input type="text" name="search" placeholder="Search by subject, recipient, UUID..."

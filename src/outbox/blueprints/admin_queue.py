@@ -1,6 +1,6 @@
 """Admin blueprint for queue browser (HTMX)."""
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, send_file, url_for
 
 from outbox.blueprints.auth import login_required
 from outbox.db import get_db
@@ -56,6 +56,38 @@ def index():
         total_pages=total_pages,
         total=total,
     )
+
+
+@bp.route("/export")
+@login_required
+def export():
+    """Export current queue view as XLSX."""
+    from outbox.services.export import write_xlsx
+
+    status = request.args.get("status")
+    search = request.args.get("search", "").strip()
+
+    messages = Message.list_messages(
+        status=status if status else None,
+        search=search if search else None,
+        limit=10000,
+        offset=0,
+    )
+    headers = ["Status", "To", "Subject", "Source", "Created", "Sent"]
+    data = [
+        [
+            m.status,
+            m.to_recipients,
+            m.subject,
+            m.source_app or "",
+            m.created_at,
+            m.sent_at or "",
+        ]
+        for m in messages
+    ]
+    path = write_xlsx(headers, data, "queue.xlsx")
+    _audit_log("queue_exported", details=f"{len(data)} messages exported")
+    return send_file(path, as_attachment=True, download_name="queue.xlsx")
 
 
 @bp.route("/<msg_uuid>")

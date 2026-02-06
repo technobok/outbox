@@ -7,6 +7,7 @@ from flask import (
     g,
     render_template,
     request,
+    send_file,
 )
 
 from outbox.blueprints.auth import login_required
@@ -77,3 +78,34 @@ def execute():
         _audit_log("sql_query_failed", details=f"{sql} -- error: {exc}")
 
     return render_template("admin/sql.html", schema=schema, query=sql, columns=columns, rows=rows)
+
+
+@bp.route("/export", methods=["POST"])
+@login_required
+def export():
+    """Export SQL query results as XLSX."""
+    from outbox.services.export import write_xlsx
+
+    sql = request.form.get("sql", "").strip()
+    if not sql:
+        flash("No SQL query provided.", "error")
+        return render_template(
+            "admin/sql.html", schema=_get_schema(), query=sql, columns=[], rows=[]
+        )
+
+    try:
+        cursor = get_db().cursor()
+        cursor.execute(sql)
+        desc = cursor.getdescription()
+        headers = [d[0] for d in desc]
+        rows = cursor.fetchall()
+    except Exception as exc:
+        flash(str(exc), "error")
+        return render_template(
+            "admin/sql.html", schema=_get_schema(), query=sql, columns=[], rows=[]
+        )
+
+    data = [list(row) for row in rows]
+    path = write_xlsx(headers, data, "query.xlsx")
+    _audit_log("sql_export", details=f"{sql} -- {len(data)} rows exported")
+    return send_file(path, as_attachment=True, download_name="query.xlsx")

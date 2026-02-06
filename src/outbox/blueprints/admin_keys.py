@@ -1,6 +1,6 @@
 """Admin blueprint for API key management (HTMX)."""
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, send_file, url_for
 
 from outbox.blueprints.auth import login_required
 from outbox.db import get_db
@@ -31,6 +31,23 @@ def index():
     """List all API keys."""
     keys = ApiKey.get_all()
     return render_template("admin/api_keys.html", keys=keys)
+
+
+@bp.route("/export")
+@login_required
+def export():
+    """Export all API keys as XLSX."""
+    from outbox.services.export import write_xlsx
+
+    keys = ApiKey.get_all()
+    headers = ["Key", "Description", "Enabled", "Created", "Last Used"]
+    data = [
+        [k.key, k.description, "Yes" if k.enabled else "No", k.created_at, k.last_used_at or ""]
+        for k in keys
+    ]
+    path = write_xlsx(headers, data, "api_keys.xlsx")
+    _audit_log("api_keys_exported", details=f"{len(data)} API keys exported")
+    return send_file(path, as_attachment=True, download_name="api_keys.xlsx")
 
 
 @bp.route("/generate", methods=["POST"])
