@@ -1,5 +1,6 @@
 """Authentication blueprint - login/logout/callback via gatekeeper_client."""
 
+import logging
 from functools import wraps
 
 from flask import (
@@ -14,6 +15,8 @@ from flask import (
     request,
     url_for,
 )
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -80,6 +83,7 @@ def login():
     sent = gk.send_magic_link(identifier, callback_url, redirect_url=next_url)
 
     if not sent:
+        logger.warning(f"Failed to send magic link for identifier: {identifier}")
         flash("Could not send login link. Check your email or username.", "error")
         return render_template("auth/login.html", next_url=next_url, identifier=identifier)
 
