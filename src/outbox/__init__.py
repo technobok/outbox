@@ -6,95 +6,61 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import apsw
 from flask import Flask
 
-from outbox.config import load_config
+from outbox.config import KEY_MAP, REGISTRY, parse_value
 
 
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     """Application factory for Outbox."""
-    if "OUTBOX_ROOT" in os.environ:
-        project_root = Path(os.environ["OUTBOX_ROOT"])
-    else:
-        source_root = Path(__file__).parent.parent.parent
-        if (source_root / "src" / "outbox" / "__init__.py").exists():
-            project_root = source_root
+    # Resolve database path
+    db_path = os.environ.get("OUTBOX_DB")
+    if not db_path:
+        if "OUTBOX_ROOT" in os.environ:
+            project_root = Path(os.environ["OUTBOX_ROOT"])
         else:
-            project_root = Path.cwd()
-
-    instance_path = project_root / "instance"
-
-    app = Flask(__name__, instance_path=str(instance_path), instance_relative_config=True)
-
-    app.config.from_mapping(
-        SECRET_KEY="dev",
-        DATABASE_PATH=str(instance_path / "outbox.sqlite3"),
-        HOST="0.0.0.0",
-        PORT=5200,
-        DEV_HOST="127.0.0.1",
-        DEV_PORT=5200,
-        DEBUG=False,
-        # Mail defaults
-        SMTP_SERVER="",
-        SMTP_PORT=587,
-        SMTP_USE_TLS=True,
-        SMTP_USERNAME="",
-        SMTP_PASSWORD="",
-        MAIL_DEFAULT_SENDER="",
-        # Queue defaults
-        QUEUE_POLL_INTERVAL=5,
-        QUEUE_MAX_RETRIES=5,
-        QUEUE_RETRY_BASE_SECONDS=120,
-        QUEUE_RETRY_MAX_SECONDS=3600,
-        QUEUE_BATCH_SIZE=10,
-        # Retention
-        RETENTION_DAYS=30,
-        # Blobs
-        BLOB_DIRECTORY=str(instance_path / "blobs"),
-        BLOB_MAX_SIZE_MB=25,
-        # Gatekeeper auth
-        GATEKEEPER_DB_PATH="",  # Local mode
-        GATEKEEPER_URL="",  # HTTP mode
-        GATEKEEPER_API_KEY="",
-    )
-
-    if test_config is None:
-        load_config(app, instance_path, project_root)
+            source_root = Path(__file__).parent.parent.parent
+            if (source_root / "src" / "outbox" / "__init__.py").exists():
+                project_root = source_root
+            else:
+                project_root = Path.cwd()
+        db_path = str(project_root / "instance" / "outbox.sqlite3")
+        instance_path = project_root / "instance"
     else:
-        app.config.from_mapping(test_config)
+        instance_path = Path(db_path).parent
 
     instance_path.mkdir(parents=True, exist_ok=True)
 
-    from outbox.db import close_db, init_db_command
+    app = Flask(__name__, instance_path=str(instance_path), instance_relative_config=True)
+
+    # Minimal defaults before DB config is loaded
+    app.config.from_mapping(
+        SECRET_KEY="dev",
+        DATABASE_PATH=db_path,
+    )
+
+    if test_config is not None:
+        app.config.from_mapping(test_config)
+    else:
+        _load_config_from_db(app)
+
+    from outbox.db import close_db
 
     app.teardown_appcontext(close_db)
-    app.cli.add_command(init_db_command)
-
-    import click
-
-    @app.cli.command("generate-api-key")
-    @click.option("--description", "-d", default="", help="Description for the API key")
-    def generate_api_key_command(description: str) -> None:
-        """Generate a new API key and print it to the console."""
-        from outbox.models.api_key import ApiKey
-
-        api_key = ApiKey.generate(description=description)
-        click.echo(api_key.key)
 
     # Initialize gatekeeper_client
-    gk_db_path = app.config["GATEKEEPER_DB_PATH"]
-    gk_url = app.config["GATEKEEPER_URL"]
-    gk_api_key = app.config["GATEKEEPER_API_KEY"]
+    gk_db_path = app.config.get("GATEKEEPER_DB_PATH", "")
+    gk_url = app.config.get("GATEKEEPER_URL", "")
+    gk_api_key = app.config.get("GATEKEEPER_API_KEY", "")
 
     if gk_db_path:
-        # Local mode - reads secret_key directly from gatekeeper database
         from gatekeeper_client import GatekeeperClient
 
         gk = GatekeeperClient(db_path=gk_db_path)
         gk.init_app(app, cookie_name="gk_session")
         app.config["GATEKEEPER_CLIENT"] = gk
     elif gk_url and gk_api_key:
-        # HTTP mode
         from gatekeeper_client import GatekeeperClient
 
         gk = GatekeeperClient(server_url=gk_url, api_key=gk_api_key)
@@ -158,17 +124,55 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
         return redirect(url_for("admin.index"))
 
-    # Load SECRET_KEY from database
-    with app.app_context():
-        from outbox.db import get_db
-        from outbox.models.app_setting import AppSetting
-
-        try:
-            get_db().execute("SELECT 1 FROM app_setting LIMIT 0").fetchone()
-            db_secret_key = AppSetting.get_secret_key()
-            if db_secret_key:
-                app.config["SECRET_KEY"] = db_secret_key
-        except Exception:
-            pass  # Database not initialized yet
-
     return app
+
+
+def _load_config_from_db(app: Flask) -> None:
+    """Load configuration from the database into Flask app.config."""
+    db_path = app.config["DATABASE_PATH"]
+
+    try:
+        conn = apsw.Connection(db_path, flags=apsw.SQLITE_OPEN_READONLY)
+    except apsw.CantOpenError:
+        # Database doesn't exist yet (init-db hasn't been run)
+        return
+
+    try:
+        rows = conn.execute("SELECT key, value FROM app_setting").fetchall()
+    except apsw.SQLError:
+        # Table doesn't exist yet
+        conn.close()
+        return
+
+    db_values = {str(r[0]): str(r[1]) for r in rows}
+    conn.close()
+
+    # Load SECRET_KEY from database
+    if "secret_key" in db_values:
+        app.config["SECRET_KEY"] = db_values["secret_key"]
+
+    # Apply registry entries
+    for entry in REGISTRY:
+        flask_key = KEY_MAP.get(entry.key)
+        if not flask_key:
+            continue
+
+        raw = db_values.get(entry.key)
+        if raw is not None:
+            value = parse_value(entry, raw)
+        else:
+            value = entry.default
+
+        app.config[flask_key] = value
+
+    # Apply ProxyFix if any proxy values are non-zero
+    x_for = app.config.get("PROXY_X_FORWARDED_FOR", 0)
+    x_proto = app.config.get("PROXY_X_FORWARDED_PROTO", 0)
+    x_host = app.config.get("PROXY_X_FORWARDED_HOST", 0)
+    x_prefix = app.config.get("PROXY_X_FORWARDED_PREFIX", 0)
+    if any((x_for, x_proto, x_host, x_prefix)):
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app, x_for=x_for, x_proto=x_proto, x_host=x_host, x_prefix=x_prefix
+        )

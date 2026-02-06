@@ -1,9 +1,10 @@
-.PHONY: help sync install init-db bootstrap-key run rundev worker check clean
+.PHONY: help sync install init-db bootstrap-key run rundev worker check clean config-list config-set config-import
 
 SHELL := /bin/bash
 VENV_DIR := $(or $(VIRTUAL_ENV),.venv)
+ADMIN := $(VENV_DIR)/bin/outbox-admin
+WEB := $(VENV_DIR)/bin/outbox-web
 PYTHON := $(VENV_DIR)/bin/python
-FLASK := $(VENV_DIR)/bin/flask
 GUNICORN := $(VENV_DIR)/bin/gunicorn
 RUFF := $(VENV_DIR)/bin/ruff
 TY := $(VENV_DIR)/bin/ty
@@ -19,6 +20,9 @@ help:
 	@echo "run      - Run server via gunicorn (0.0.0.0:5200)"
 	@echo "rundev   - Run Flask dev server (DEV_HOST:DEV_PORT, debug=True)"
 	@echo "worker   - Run the queue worker process"
+	@echo "config-list  - Show all config settings"
+	@echo "config-set KEY=key VAL=value  - Set a config value"
+	@echo "config-import FILE=path  - Import settings from INI file"
 	@echo "check    - Run ruff and ty for code quality"
 	@echo "clean    - Remove temporary files and database"
 
@@ -28,19 +32,28 @@ sync:
 install: sync
 
 init-db:
-	@$(FLASK) --app wsgi init-db
+	@$(ADMIN) init-db
 
 bootstrap-key:
-	@$(FLASK) --app wsgi generate-api-key --description "$(or $(DESC),bootstrap)"
+	@$(ADMIN) generate-api-key --description "$(or $(DESC),bootstrap)"
 
 run:
 	@$(GUNICORN) wsgi:app --bind 0.0.0.0:5200 --workers 2 --preload
 
 rundev:
-	@$(PYTHON) wsgi.py --dev
+	@$(WEB) --dev
 
 worker:
 	@$(PYTHON) -m worker.queue_worker
+
+config-list:
+	@$(ADMIN) config list
+
+config-set:
+	@$(ADMIN) config set $(KEY) $(VAL)
+
+config-import:
+	@$(ADMIN) config import $(or $(FILE),$(file))
 
 check:
 	@$(RUFF) format src

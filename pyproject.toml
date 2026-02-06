@@ -10,8 +10,13 @@ dependencies = [
     "mistune>=3.0",
     "itsdangerous>=2.1",
     "openpyxl>=3.1",
+    "click>=8.0",
     "gatekeeper",
 ]
+
+[project.scripts]
+outbox-admin = "outbox.cli:main"
+outbox-web = "outbox.web:main"
 
 [tool.uv.sources]
 gatekeeper = { path = "../gatekeeper", editable = true }
