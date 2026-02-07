@@ -55,13 +55,13 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     gk_api_key = app.config.get("GATEKEEPER_API_KEY", "")
 
     if gk_db_path:
-        from gatekeeper_client import GatekeeperClient
+        from gatekeeper import GatekeeperClient
 
         gk = GatekeeperClient(db_path=gk_db_path)
         gk.init_app(app, cookie_name="gk_session")
         app.config["GATEKEEPER_CLIENT"] = gk
     elif gk_url and gk_api_key:
-        from gatekeeper_client import GatekeeperClient
+        from gatekeeper import GatekeeperClient
 
         gk = GatekeeperClient(server_url=gk_url, api_key=gk_api_key)
         gk.init_app(app, cookie_name="gk_session")
