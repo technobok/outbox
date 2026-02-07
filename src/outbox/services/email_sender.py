@@ -63,6 +63,7 @@ def send_message(message: Message) -> None:
     if smtp_use_tls:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
+            server.ehlo()
             _try_login(server, smtp_username, smtp_password)
             server.sendmail(message.from_address, all_recipients, msg.as_string())
     else:
