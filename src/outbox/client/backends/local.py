@@ -7,7 +7,7 @@ from pathlib import Path
 
 import apsw
 
-from outbox_client.models import Message, MessageResult
+from outbox.client.models import Message, MessageResult
 
 
 def _opt_str(val: object) -> str | None:

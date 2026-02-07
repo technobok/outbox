@@ -2,9 +2,9 @@
 
 import base64
 
-import httpx  # type: ignore[import-not-found]
+import httpx
 
-from outbox_client.models import Message, MessageResult
+from outbox.client.models import Message, MessageResult
 
 
 class HttpBackend:

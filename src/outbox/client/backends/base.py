@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from outbox_client.models import Message, MessageResult
+from outbox.client.models import Message, MessageResult
 
 
 class OutboxBackend(Protocol):

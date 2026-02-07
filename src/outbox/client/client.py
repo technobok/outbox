@@ -1,6 +1,6 @@
 """OutboxClient facade - unified API for both local and HTTP modes."""
 
-from outbox_client.models import Message, MessageResult
+from outbox.client.models import Message, MessageResult
 
 
 class OutboxClient:
@@ -36,12 +36,12 @@ class OutboxClient:
         api_key: str | None = None,
     ) -> None:
         if db_path:
-            from outbox_client.backends.local import LocalBackend
+            from outbox.client.backends.local import LocalBackend
 
             self.backend = LocalBackend(db_path)
             self.mode = "local"
         elif server_url and api_key:
-            from outbox_client.backends.http import HttpBackend
+            from outbox.client.backends.http import HttpBackend
 
             self.backend = HttpBackend(server_url, api_key)
             self.mode = "http"

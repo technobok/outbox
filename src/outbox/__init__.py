@@ -1,5 +1,9 @@
 """Outbox - Centralized Mail Queue Service."""
 
+from outbox.client import Attachment, Message, MessageStatus, OutboxClient
+
+__all__ = ["OutboxClient", "Message", "MessageStatus", "Attachment", "create_app"]
+
 import os
 from datetime import UTC, datetime
 from pathlib import Path

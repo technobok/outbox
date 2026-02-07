@@ -75,12 +75,25 @@ Body types: `plain`, `html`, `markdown` (rendered to HTML with plain text fallba
 
 Attachments are supported via `attachments` array with base64-encoded content.
 
+## Database Location
+
+Default: `instance/outbox.sqlite3` (relative to project root).
+
+Resolution order:
+1. `OUTBOX_DB` environment variable (absolute path)
+2. `DATABASE_PATH` in Flask config
+3. `instance/outbox.sqlite3` under the detected project root (`OUTBOX_ROOT` env var, or auto-detected from source tree, or current working directory)
+
+```bash
+export OUTBOX_DB=/data/outbox.sqlite3   # override default location
+```
+
 ## Client Library
 
-`outbox_client` supports two modes:
+The client library is bundled as `outbox.client` and re-exported from the top-level package:
 
 ```python
-from outbox_client import OutboxClient, Message
+from outbox import OutboxClient, Message
 
 # Local mode (direct SQLite insertion, same machine)
 client = OutboxClient(db_path="/path/to/outbox.sqlite3")
@@ -95,6 +108,13 @@ result = client.submit_message(Message(
     body="World",
 ))
 print(result.uuid, result.status)
+```
+
+The `outbox.client` sub-package can also be imported directly for finer-grained access:
+
+```python
+from outbox.client import OutboxClient
+from outbox.client.models import MessageResult
 ```
 
 ## Message Flow

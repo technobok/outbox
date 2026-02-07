@@ -25,6 +25,10 @@ help:
 	@echo "config-import FILE=path  - Import settings from INI file"
 	@echo "check    - Run ruff and ty for code quality"
 	@echo "clean    - Remove temporary files and database"
+	@echo ""
+	@echo "Database: instance/outbox.sqlite3 (default)"
+	@echo "Set OUTBOX_DB to override, e.g.:"
+	@echo "  export OUTBOX_DB=/data/outbox.sqlite3"
 
 sync:
 	@uv sync --extra dev
@@ -58,7 +62,7 @@ config-import:
 check:
 	@$(RUFF) format src
 	@$(RUFF) check src --fix
-	@$(TY) check src
+	@if [ -z "$$VIRTUAL_ENV" ]; then unset VIRTUAL_ENV; fi; $(TY) check src
 
 clean:
 	@find . -type f -name '*.py[co]' -delete
