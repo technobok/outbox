@@ -128,6 +128,7 @@ The web interface (requires Gatekeeper auth) provides:
 | `make config-list` | Show all configuration settings |
 | `make config-set KEY=... VAL=...` | Set a configuration value |
 | `make config-import FILE=...` | Import settings from an INI file |
+| `make config-export FILE=...` | Export all settings as a shell script |
 | `make check` | Run ruff (format + lint) and ty (type check) |
 | `make clean` | Remove bytecode and the database file |
 
@@ -141,6 +142,7 @@ outbox-admin generate-api-key     # Generate a new API key
 outbox-admin config list          # Show settings
 outbox-admin config set KEY VAL   # Set a setting
 outbox-admin config import FILE   # Import from INI
+outbox-admin config export FILE   # Export all settings as a shell script
 ```
 
 ## Configuration reference
