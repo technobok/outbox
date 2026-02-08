@@ -100,7 +100,7 @@
                 <button type="submit" class="contrast">Cancel</button>
             </form>
             {% endif %}
-            <a role="button" class="outline" href="{{ url_for('admin_queue.index') }}">Back to Queue</a>
+            <button type="button" onclick="location.href='{{ url_for('admin_queue.index') }}'" class="outline">Back to Queue</button>
         </div>
     </footer>
 </article>
