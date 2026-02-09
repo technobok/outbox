@@ -8,3 +8,4 @@ instance/
 config.ini
 *.sqlite3
 uv.lock
+docker-compose.override.yml
