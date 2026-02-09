@@ -15,7 +15,8 @@ COPY worker/ worker/
 COPY wsgi.py ./
 RUN mkdir -p instance
 
-RUN uv pip install --system -e ".[dev]"
+RUN uv pip install --system git+https://github.com/technobok/gatekeeper.git && \
+    uv pip install --system --no-sources -e ".[dev]"
 
 EXPOSE 5200
 
