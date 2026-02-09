@@ -4,8 +4,8 @@ services:
     container_name: outbox-init
     command: ["sh", "-c", "outbox-admin init-db && outbox-admin config import /etc/outbox/outbox.ini"]
     volumes:
-      - outbox-data:/data
-      - gatekeeper-data:/gatekeeper-data:ro
+      - ./instance:/data
+      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
       - ./config.ini:/etc/outbox/outbox.ini:ro
     environment:
       - OUTBOX_DB=/data/outbox.sqlite3
@@ -19,8 +19,8 @@ services:
     container_name: outbox-web
     command: ["outbox-web"]
     volumes:
-      - outbox-data:/data
-      - gatekeeper-data:/gatekeeper-data:ro
+      - ./instance:/data
+      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
     environment:
       - OUTBOX_DB=/data/outbox.sqlite3
       - TZ=${TZ:-UTC}
@@ -33,8 +33,8 @@ services:
     container_name: outbox-worker
     command: ["outbox-worker"]
     volumes:
-      - outbox-data:/data
-      - gatekeeper-data:/gatekeeper-data:ro
+      - ./instance:/data
+      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
     environment:
       - OUTBOX_DB=/data/outbox.sqlite3
       - SMTP_HOST=${SMTP_HOST:-}
@@ -46,12 +46,6 @@ services:
     networks:
       - platform-net
     restart: unless-stopped
-
-volumes:
-  outbox-data:
-    external: true
-  gatekeeper-data:
-    external: true
 
 networks:
   platform-net:

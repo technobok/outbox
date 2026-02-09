@@ -70,6 +70,8 @@ check:
 
 docker-up:
 	@test -f config.ini || { echo "Error: config.ini not found — copy from config.ini.example first"; exit 1; }
+	@mkdir -p instance
+	@test -d "$${GATEKEEPER_INSTANCE:-../gatekeeper/instance}" || { echo "Error: gatekeeper instance dir not found at $${GATEKEEPER_INSTANCE:-../gatekeeper/instance}"; echo "  Run 'mkdir -p ../gatekeeper/instance' or set GATEKEEPER_INSTANCE"; exit 1; }
 	docker compose up -d
 
 docker-down:
