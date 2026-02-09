@@ -12,7 +12,7 @@ COPY pyproject.toml ./
 COPY src/ src/
 COPY database/ database/
 COPY worker/ worker/
-COPY wsgi.py Makefile config.ini.example ./
+COPY wsgi.py ./
 RUN mkdir -p instance
 
 RUN uv pip install --system -e ".[dev]"
