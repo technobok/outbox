@@ -1,23 +1,57 @@
 services:
+  init:
+    build: .
+    container_name: outbox-init
+    command: ["sh", "-c", "outbox-admin init-db && outbox-admin config import /etc/outbox/outbox.ini"]
+    volumes:
+      - outbox-data:/data
+      - gatekeeper-data:/gatekeeper-data:ro
+      - ./config.ini:/etc/outbox/outbox.ini:ro
+    environment:
+      - OUTBOX_DB=/data/outbox.sqlite3
+      - TZ=${TZ:-UTC}
+    restart: "no"
+    profiles:
+      - init
+
   web:
     build: .
-    ports:
-      - "5200:5200"
+    container_name: outbox-web
+    command: ["outbox-web"]
     volumes:
-      - ./instance:/app/instance
-      - ./config.ini:/app/config.ini:ro
+      - outbox-data:/data
+      - gatekeeper-data:/gatekeeper-data:ro
     environment:
-      - OUTBOX_ROOT=/app
+      - OUTBOX_DB=/data/outbox.sqlite3
+      - TZ=${TZ:-UTC}
+    networks:
+      - platform-net
     restart: unless-stopped
 
   worker:
     build: .
-    command: ["python", "-m", "worker.queue_worker"]
+    container_name: outbox-worker
+    command: ["outbox-worker"]
     volumes:
-      - ./instance:/app/instance
-      - ./config.ini:/app/config.ini:ro
+      - outbox-data:/data
+      - gatekeeper-data:/gatekeeper-data:ro
     environment:
-      - OUTBOX_ROOT=/app
+      - OUTBOX_DB=/data/outbox.sqlite3
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - TZ=${TZ:-UTC}
+    networks:
+      - platform-net
     restart: unless-stopped
-    depends_on:
-      - web
+
+volumes:
+  outbox-data:
+  gatekeeper-data:
+    external: true
+
+networks:
+  platform-net:
+    external: true
