@@ -31,7 +31,7 @@ services:
   worker:
     build: .
     container_name: outbox-worker
-    command: ["outbox-worker"]
+    command: ["python", "-m", "worker.queue_worker"]
     volumes:
       - ./instance:/data
       - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
