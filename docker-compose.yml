@@ -49,6 +49,7 @@ services:
 
 volumes:
   outbox-data:
+    external: true
   gatekeeper-data:
     external: true
 
