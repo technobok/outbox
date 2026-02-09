@@ -35,12 +35,18 @@ All CLI commands (`outbox-admin`, `make config-*`, `make init-db`) and the web s
 
 ### Run with Docker
 
+The `docker-compose.yml` joins a shared Docker network (`platform-net`) for use behind a reverse proxy.
+
 ```bash
+# First time only — initialize the database
+docker compose --profile init up init
+
+# Build and start
 docker compose build
 docker compose up -d        # Starts web + worker services
 ```
 
-The container exposes port 5200 and persists data at `./instance/outbox.sqlite3` via a volume mount. Inside the container, `OUTBOX_ROOT` is set to `/app`.
+Data is persisted in the `outbox-data` Docker volume.
 
 ## HTTP API
 
