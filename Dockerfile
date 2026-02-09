@@ -15,7 +15,7 @@ COPY worker/ worker/
 COPY wsgi.py Makefile config.ini.example ./
 RUN mkdir -p instance
 
-RUN uv pip install --system -e . --extra dev
+RUN uv pip install --system -e ".[dev]"
 
 EXPOSE 5200
 
