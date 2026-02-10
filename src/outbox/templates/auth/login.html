@@ -4,19 +4,12 @@
 {% block content %}
 <article style="max-width: 400px; margin: 2rem auto;">
     <header>
-        <h2>Sign In</h2>
+        <h2>Login to Outbox</h2>
     </header>
-    <form method="post" action="{{ url_for('auth.login') }}">
-        <input type="hidden" name="next" value="{{ next_url | default('/', true) }}">
-        <label for="identifier">
-            Email or Username
-            <input type="text" id="identifier" name="identifier"
-                   value="{{ identifier | default('', true) }}"
-                   placeholder="user@example.com"
-                   required autofocus>
-        </label>
-        <small>A login link will be sent to your email.</small>
-        <button type="submit">Send Login Link</button>
-    </form>
+
+    {% if not login_url %}
+    <p>Login is not configured.</p>
+    <p>Set <code>server.login_url</code> in the Gatekeeper database and add a <code>[gatekeeper]</code> section to <code>config.ini</code> to enable SSO login.</p>
+    {% endif %}
 </article>
 {% endblock %}

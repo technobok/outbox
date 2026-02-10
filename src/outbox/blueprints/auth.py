@@ -63,35 +63,28 @@ def admin_required(f: Callable[..., Any]) -> Callable[..., Any]:
     return decorated
 
 
-@bp.route("/login", methods=["GET", "POST"])
+@bp.route("/login")
 def login() -> str | Response:
-    """Show login form or initiate magic link flow."""
+    """Redirect to Gatekeeper SSO login, or show fallback page."""
+    if g.get("user"):
+        return redirect(url_for("index"))
+
     gk = _get_gk()
-
-    if request.method == "GET":
-        return render_template("auth/login.html", next_url=request.args.get("next", "/"))
-
-    identifier = request.form.get("identifier", "").strip()
-    next_url = request.form.get("next", "/")
-
-    if not identifier:
-        flash("Please enter your email or username.", "error")
-        return render_template("auth/login.html", next_url=next_url)
-
     if not gk:
-        flash("Authentication is not configured.", "error")
-        return render_template("auth/login.html", next_url=next_url)
+        return render_template("auth/login.html", login_url=None)
 
+    login_url = gk.get_login_url()
+    if not login_url:
+        return render_template("auth/login.html", login_url=None)
+
+    next_url = request.args.get("next", "/")
     callback_url = url_for("auth.callback", _external=True)
-    sent = gk.send_magic_link(identifier, callback_url, redirect_url=next_url, app_name="Outbox")
 
-    if not sent:
-        logger.warning(f"Failed to send magic link for identifier: {identifier}")
-        flash("Could not send login link. Check your email or username.", "error")
-        return render_template("auth/login.html", next_url=next_url, identifier=identifier)
-
-    flash("Login link sent! Check your email.", "success")
-    return render_template("auth/login.html", next_url=next_url)
+    return redirect(
+        f"{login_url}?app_name=Outbox"
+        f"&callback_url={callback_url}"
+        f"&next={next_url}"
+    )
 
 
 @bp.route("/callback")
