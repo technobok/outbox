@@ -2,9 +2,12 @@
 
 import base64
 import json
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 from flask import Blueprint, g, jsonify, request
+from werkzeug.wrappers import Response
 
 from outbox.db import get_db
 from outbox.models.api_key import ApiKey
@@ -14,11 +17,11 @@ from outbox.services.attachment_service import save_attachment
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
 
-def api_key_required(f):
+def api_key_required(f: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator: require valid API key in X-API-Key header."""
 
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> Any:
         raw_key = request.headers.get("X-API-Key", "")
         if not raw_key:
             return jsonify({"error": "Missing X-API-Key header"}), 401
@@ -47,7 +50,7 @@ def _audit_log(action: str, target: str | None = None, details: str | None = Non
 
 @bp.route("/messages", methods=["POST"])
 @api_key_required
-def submit_message():
+def submit_message() -> Response | tuple[Response, int]:
     """Submit a new message to the queue."""
     data = request.get_json(silent=True)
     if not data:
@@ -112,7 +115,7 @@ def submit_message():
 
 @bp.route("/messages/<msg_uuid>")
 @api_key_required
-def get_message(msg_uuid: str):
+def get_message(msg_uuid: str) -> Response | tuple[Response, int]:
     """Get a message by UUID."""
     message = Message.get_by_uuid(msg_uuid)
     if message is None:
@@ -123,7 +126,7 @@ def get_message(msg_uuid: str):
 
 @bp.route("/messages")
 @api_key_required
-def list_messages():
+def list_messages() -> Response:
     """List messages with optional filtering."""
     status = request.args.get("status")
     search = request.args.get("search")
@@ -145,7 +148,7 @@ def list_messages():
 
 @bp.route("/messages/<msg_uuid>/retry", methods=["POST"])
 @api_key_required
-def retry_message(msg_uuid: str):
+def retry_message(msg_uuid: str) -> Response | tuple[Response, int]:
     """Retry a failed/dead message."""
     message = Message.get_by_uuid(msg_uuid)
     if message is None:
@@ -165,7 +168,7 @@ def retry_message(msg_uuid: str):
 
 @bp.route("/messages/<msg_uuid>/cancel", methods=["POST"])
 @api_key_required
-def cancel_message(msg_uuid: str):
+def cancel_message(msg_uuid: str) -> Response | tuple[Response, int]:
     """Cancel a queued message."""
     message = Message.get_by_uuid(msg_uuid)
     if message is None:
@@ -180,7 +183,7 @@ def cancel_message(msg_uuid: str):
     return jsonify({"uuid": message.uuid, "status": message.status})
 
 
-def _message_to_dict(message: Message) -> dict:
+def _message_to_dict(message: Message) -> dict[str, Any]:
     return {
         "uuid": message.uuid,
         "status": message.status,

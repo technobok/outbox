@@ -7,6 +7,7 @@ import sys
 from datetime import UTC, datetime
 
 import click
+from flask import Flask
 
 from outbox.config import (
     INI_MAP,
@@ -24,7 +25,7 @@ from outbox.db import (
 )
 
 
-def _make_app():
+def _make_app() -> Flask:
     """Create a Flask app for commands that need app context."""
     from outbox import create_app
 
@@ -66,7 +67,7 @@ def _db_set(key: str, value: str) -> None:
 
 
 @click.group()
-def main():
+def main() -> None:
     """Outbox administration tool."""
 
 
@@ -74,12 +75,12 @@ def main():
 
 
 @main.group()
-def config():
+def config() -> None:
     """View and manage configuration settings."""
 
 
 @config.command("list")
-def config_list():
+def config_list() -> None:
     """Show all settings with their effective values."""
     db_values = _db_get_all()
 
@@ -114,7 +115,7 @@ def config_list():
 
 @config.command("get")
 @click.argument("key")
-def config_get(key: str):
+def config_get(key: str) -> None:
     """Get the effective value of a setting."""
     entry = resolve_entry(key)
     if not entry:
@@ -143,7 +144,7 @@ def config_get(key: str):
 @config.command("set")
 @click.argument("key")
 @click.argument("value")
-def config_set(key: str, value: str):
+def config_set(key: str, value: str) -> None:
     """Set a configuration value in the database."""
     entry = resolve_entry(key)
     if not entry:
@@ -165,7 +166,7 @@ def config_set(key: str, value: str):
 
 @config.command("export")
 @click.argument("output_file", type=click.Path())
-def config_export(output_file: str):
+def config_export(output_file: str) -> None:
     """Export all settings as a shell script of make config-set calls."""
     db_values = _db_get_all()
     lines = [
@@ -194,7 +195,7 @@ def config_export(output_file: str):
 
 @config.command("import")
 @click.argument("ini_file", type=click.Path(exists=True))
-def config_import(ini_file: str):
+def config_import(ini_file: str) -> None:
     """Import settings from an INI config file."""
     cfg = configparser.ConfigParser()
     cfg.read(ini_file)
@@ -227,7 +228,7 @@ def config_import(ini_file: str):
 
 
 @main.command("init-db")
-def init_db_command():
+def init_db_command() -> None:
     """Initialize the database schema."""
     db_path = get_db_path()
     init_db_at(db_path)
@@ -236,7 +237,7 @@ def init_db_command():
 
 @main.command("generate-api-key")
 @click.option("--description", "-d", default="", help="Description for the API key")
-def generate_api_key_command(description: str):
+def generate_api_key_command(description: str) -> None:
     """Generate a new API key and print it to the console."""
     app = _make_app()
     with app.app_context():

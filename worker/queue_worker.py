@@ -15,7 +15,7 @@ log = logging.getLogger("outbox.worker")
 _running = True
 
 
-def _handle_signal(signum, frame):
+def _handle_signal(signum: int, frame: object) -> None:
     global _running
     log.info("Received signal %s, shutting down...", signum)
     _running = False

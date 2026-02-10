@@ -1,6 +1,7 @@
 """Admin dashboard blueprint."""
 
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
+from werkzeug.wrappers import Response
 
 from outbox.blueprints.auth import login_required
 from outbox.models.app_setting import AppSetting
@@ -11,7 +12,7 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 @bp.route("/")
 @login_required
-def index():
+def index() -> str:
     """Dashboard with queue statistics."""
     stats = Message.stats()
     secret_key = AppSetting.get_secret_key()
@@ -20,7 +21,7 @@ def index():
 
 @bp.route("/rotate-secret-key", methods=["POST"])
 @login_required
-def rotate_secret_key():
+def rotate_secret_key() -> Response:
     """Rotate the SECRET_KEY, invalidating all sessions."""
     new_key = AppSetting.rotate_secret_key()
     current_app.config["SECRET_KEY"] = new_key

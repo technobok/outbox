@@ -8,8 +8,10 @@ import click
 @click.option("--port", default=None, type=int, help="Port (overrides config)")
 @click.option("--workers", default=2, help="Number of gunicorn workers")
 @click.option("--dev", is_flag=True, help="Run Flask development server with debug mode")
-def main(host: str | None, port: int | None, workers: int, dev: bool):
+def main(host: str | None, port: int | None, workers: int, dev: bool) -> None:
     """Start the Outbox web server."""
+    from flask import Flask
+
     from outbox import create_app
 
     app = create_app()
@@ -25,12 +27,12 @@ def main(host: str | None, port: int | None, workers: int, dev: bool):
         import gunicorn.app.base
 
         class OutboxApp(gunicorn.app.base.BaseApplication):
-            def load_config(self):
-                self.cfg.set("bind", f"{run_host}:{run_port}")
-                self.cfg.set("workers", str(workers))
-                self.cfg.set("preload_app", True)
+            def load_config(self) -> None:
+                self.cfg.set("bind", f"{run_host}:{run_port}")  # type: ignore[union-attr]
+                self.cfg.set("workers", str(workers))  # type: ignore[union-attr]
+                self.cfg.set("preload_app", True)  # type: ignore[union-attr]
 
-            def load(self):
+            def load(self) -> Flask:
                 return app
 
         OutboxApp().run()

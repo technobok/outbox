@@ -9,6 +9,7 @@ from flask import (
     request,
     send_file,
 )
+from werkzeug.wrappers import Response
 
 from outbox.blueprints.auth import login_required
 from outbox.db import get_db
@@ -42,7 +43,7 @@ def _get_schema() -> list[dict[str, object]]:
 
 @bp.route("/", methods=["GET"])
 @login_required
-def index():
+def index() -> str:
     """Show the SQL query page."""
     schema = _get_schema()
     return render_template("admin/sql.html", schema=schema, query="", columns=[], rows=[])
@@ -50,7 +51,7 @@ def index():
 
 @bp.route("/", methods=["POST"])
 @login_required
-def execute():
+def execute() -> str:
     """Execute a SQL query and display results."""
     sql = request.form.get("sql", "").strip()
     schema = _get_schema()
@@ -82,7 +83,7 @@ def execute():
 
 @bp.route("/export", methods=["POST"])
 @login_required
-def export():
+def export() -> str | Response:
     """Export SQL query results as XLSX."""
     from outbox.services.export import write_xlsx
 

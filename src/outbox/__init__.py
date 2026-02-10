@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 import apsw
 from flask import Flask
+from werkzeug.wrappers import Response
 
 from outbox.config import KEY_MAP, REGISTRY, parse_value
 
@@ -123,7 +124,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     # Root route redirects to admin dashboard
     @app.route("/")
-    def index():
+    def index() -> Response:
         from flask import redirect, url_for
 
         return redirect(url_for("admin.index"))
@@ -177,6 +178,6 @@ def _load_config_from_db(app: Flask) -> None:
     if any((x_for, x_proto, x_host, x_prefix)):
         from werkzeug.middleware.proxy_fix import ProxyFix
 
-        app.wsgi_app = ProxyFix(
+        app.wsgi_app = ProxyFix(  # type: ignore[assignment]
             app.wsgi_app, x_for=x_for, x_proto=x_proto, x_host=x_host, x_prefix=x_prefix
         )

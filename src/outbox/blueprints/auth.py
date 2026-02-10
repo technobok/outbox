@@ -1,7 +1,9 @@
 """Authentication blueprint - login/logout/callback via gatekeeper_client."""
 
 import logging
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 from flask import (
     Blueprint,
@@ -15,13 +17,14 @@ from flask import (
     request,
     url_for,
 )
+from werkzeug.wrappers import Response
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-def _get_gk():
+def _get_gk() -> Any:
     """Get the GatekeeperClient instance."""
     return current_app.config.get("GATEKEEPER_CLIENT")
 
@@ -30,11 +33,11 @@ def _is_htmx() -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
-def login_required(f):
+def login_required(f: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator: require authentication via gatekeeper_client."""
 
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> Any:
         if g.get("user") is None:
             if _is_htmx():
                 return "", 401
@@ -44,11 +47,11 @@ def login_required(f):
     return decorated
 
 
-def admin_required(f):
+def admin_required(f: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator: require admin group membership."""
 
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> Any:
         if g.get("user") is None:
             if _is_htmx():
                 return "", 401
@@ -61,7 +64,7 @@ def admin_required(f):
 
 
 @bp.route("/login", methods=["GET", "POST"])
-def login():
+def login() -> str | Response:
     """Show login form or initiate magic link flow."""
     gk = _get_gk()
 
@@ -92,7 +95,7 @@ def login():
 
 
 @bp.route("/callback")
-def callback():
+def callback() -> Response:
     """Handle magic link callback from Gatekeeper."""
     gk = _get_gk()
     if not gk:
@@ -127,7 +130,7 @@ def callback():
 
 
 @bp.route("/logout", methods=["POST"])
-def logout():
+def logout() -> Response:
     """Clear the auth cookie."""
     response = make_response(redirect(url_for("auth.login")))
     response.delete_cookie("gk_session")

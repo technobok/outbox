@@ -1,6 +1,7 @@
 """Admin blueprint for API key management (HTMX)."""
 
 from flask import Blueprint, flash, g, redirect, render_template, request, send_file, url_for
+from werkzeug.wrappers import Response
 
 from outbox.blueprints.auth import login_required
 from outbox.db import get_db
@@ -27,7 +28,7 @@ def _is_htmx() -> bool:
 
 @bp.route("/")
 @login_required
-def index():
+def index() -> str:
     """List all API keys."""
     keys = ApiKey.get_all()
     return render_template("admin/api_keys.html", keys=keys)
@@ -35,7 +36,7 @@ def index():
 
 @bp.route("/export")
 @login_required
-def export():
+def export() -> Response:
     """Export all API keys as XLSX."""
     from outbox.services.export import write_xlsx
 
@@ -52,7 +53,7 @@ def export():
 
 @bp.route("/generate", methods=["POST"])
 @login_required
-def generate():
+def generate() -> Response:
     """Generate a new API key."""
     description = request.form.get("description", "").strip()
     if not description:
@@ -67,7 +68,7 @@ def generate():
 
 @bp.route("/<int:key_id>/toggle", methods=["POST"])
 @login_required
-def toggle(key_id: int):
+def toggle(key_id: int) -> str | Response:
     """Toggle an API key between enabled and disabled."""
     api_key = ApiKey.get(key_id)
     if api_key is None:
@@ -89,7 +90,7 @@ def toggle(key_id: int):
 
 @bp.route("/<int:key_id>/delete", methods=["POST"])
 @login_required
-def delete(key_id: int):
+def delete(key_id: int) -> str | Response | tuple[str, int]:
     """Delete an API key."""
     api_key = ApiKey.get(key_id)
     if api_key is None:

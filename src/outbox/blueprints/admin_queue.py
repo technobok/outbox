@@ -1,6 +1,7 @@
 """Admin blueprint for queue browser (HTMX)."""
 
 from flask import Blueprint, flash, g, redirect, render_template, request, send_file, url_for
+from werkzeug.wrappers import Response
 
 from outbox.blueprints.auth import login_required
 from outbox.db import get_db
@@ -28,7 +29,7 @@ def _is_htmx() -> bool:
 
 @bp.route("/")
 @login_required
-def index():
+def index() -> str:
     """Queue browser: list messages with filters."""
     status = request.args.get("status")
     search = request.args.get("search", "").strip()
@@ -60,7 +61,7 @@ def index():
 
 @bp.route("/export")
 @login_required
-def export():
+def export() -> Response:
     """Export current queue view as XLSX."""
     from outbox.services.export import write_xlsx
 
@@ -92,7 +93,7 @@ def export():
 
 @bp.route("/<msg_uuid>")
 @login_required
-def detail(msg_uuid: str):
+def detail(msg_uuid: str) -> str | Response:
     """View full message detail."""
     message = Message.get_by_uuid(msg_uuid)
     if message is None:
@@ -105,7 +106,7 @@ def detail(msg_uuid: str):
 
 @bp.route("/<msg_uuid>/retry", methods=["POST"])
 @login_required
-def retry(msg_uuid: str):
+def retry(msg_uuid: str) -> str | Response:
     """Retry a failed/dead message."""
     message = Message.get_by_uuid(msg_uuid)
     if message is None:
@@ -134,7 +135,7 @@ def retry(msg_uuid: str):
 
 @bp.route("/<msg_uuid>/cancel", methods=["POST"])
 @login_required
-def cancel(msg_uuid: str):
+def cancel(msg_uuid: str) -> str | Response:
     """Cancel a queued message."""
     message = Message.get_by_uuid(msg_uuid)
     if message is None:
