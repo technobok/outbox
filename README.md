@@ -176,9 +176,9 @@ All settings are stored in the SQLite database (`app_setting` table) and managed
 | `retention.days` | int | `30` | Days to keep sent/dead messages |
 | `blobs.directory` | string | `instance/blobs` | Blob storage directory path |
 | `blobs.max_size_mb` | int | `25` | Maximum blob size in MB |
-| `auth.gatekeeper_db_path` | string | | Path to local Gatekeeper database |
-| `auth.gatekeeper_url` | string | | Gatekeeper HTTP API base URL |
-| `auth.gatekeeper_api_key` | string | | Gatekeeper API key |
+| `gatekeeper.db_path` | string | | Path to Gatekeeper SQLite database (local mode) |
+| `gatekeeper.url` | string | | Gatekeeper HTTP API base URL (remote mode) |
+| `gatekeeper.api_key` | string | | Gatekeeper API key (remote mode) |
 | `proxy.x_forwarded_for` | int | `0` | Trust X-Forwarded-For (hop count) |
 | `proxy.x_forwarded_proto` | int | `0` | Trust X-Forwarded-Proto (hop count) |
 | `proxy.x_forwarded_host` | int | `0` | Trust X-Forwarded-Host (hop count) |

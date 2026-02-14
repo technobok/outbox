@@ -58,12 +58,10 @@ REGISTRY: list[ConfigEntry] = [
     # -- blobs --
     ConfigEntry("blobs.directory", ConfigType.STRING, "instance/blobs", "Blob storage directory"),
     ConfigEntry("blobs.max_size_mb", ConfigType.INT, 25, "Maximum blob size in MB"),
-    # -- auth --
-    ConfigEntry("auth.gatekeeper_db_path", ConfigType.STRING, "", "Path to gatekeeper database"),
-    ConfigEntry("auth.gatekeeper_url", ConfigType.STRING, "", "Gatekeeper HTTP API base URL"),
-    ConfigEntry(
-        "auth.gatekeeper_api_key", ConfigType.STRING, "", "Gatekeeper API key", secret=True
-    ),
+    # -- gatekeeper --
+    ConfigEntry("gatekeeper.db_path", ConfigType.STRING, "", "Path to Gatekeeper SQLite database"),
+    ConfigEntry("gatekeeper.url", ConfigType.STRING, "", "Gatekeeper HTTP API base URL"),
+    ConfigEntry("gatekeeper.api_key", ConfigType.STRING, "", "Gatekeeper API key", secret=True),
     # -- proxy --
     ConfigEntry("proxy.x_forwarded_for", ConfigType.INT, 0, "Trust X-Forwarded-For (hop count)"),
     ConfigEntry(
@@ -139,9 +137,9 @@ KEY_MAP: dict[str, str] = {
     "retention.days": "RETENTION_DAYS",
     "blobs.directory": "BLOB_DIRECTORY",
     "blobs.max_size_mb": "BLOB_MAX_SIZE_MB",
-    "auth.gatekeeper_db_path": "GATEKEEPER_DB_PATH",
-    "auth.gatekeeper_url": "GATEKEEPER_URL",
-    "auth.gatekeeper_api_key": "GATEKEEPER_API_KEY",
+    "gatekeeper.db_path": "GATEKEEPER_DB_PATH",
+    "gatekeeper.url": "GATEKEEPER_URL",
+    "gatekeeper.api_key": "GATEKEEPER_API_KEY",
     "proxy.x_forwarded_for": "PROXY_X_FORWARDED_FOR",
     "proxy.x_forwarded_proto": "PROXY_X_FORWARDED_PROTO",
     "proxy.x_forwarded_host": "PROXY_X_FORWARDED_HOST",
@@ -174,9 +172,9 @@ INI_MAP: dict[tuple[str, str], str | None] = {
     ("retention", "DAYS"): "retention.days",
     ("blobs", "DIRECTORY"): "blobs.directory",
     ("blobs", "MAX_SIZE_MB"): "blobs.max_size_mb",
-    ("auth", "GATEKEEPER_DB_PATH"): "auth.gatekeeper_db_path",
-    ("auth", "GATEKEEPER_URL"): "auth.gatekeeper_url",
-    ("auth", "GATEKEEPER_API_KEY"): "auth.gatekeeper_api_key",
+    ("gatekeeper", "DB_PATH"): "gatekeeper.db_path",
+    ("gatekeeper", "URL"): "gatekeeper.url",
+    ("gatekeeper", "API_KEY"): "gatekeeper.api_key",
     ("proxy", "X_FORWARDED_FOR"): "proxy.x_forwarded_for",
     ("proxy", "X_FORWARDED_PROTO"): "proxy.x_forwarded_proto",
     ("proxy", "X_FORWARDED_HOST"): "proxy.x_forwarded_host",
