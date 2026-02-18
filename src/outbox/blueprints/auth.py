@@ -109,16 +109,8 @@ def callback() -> Response:
         flash("Access is restricted to administrators.", "error")
         return redirect(url_for("auth.login"))
 
-    auth_token = gk.create_auth_token(user)
     response = make_response(redirect(redirect_url))
-    response.set_cookie(
-        "gk_session",
-        auth_token,
-        httponly=True,
-        samesite="Lax",
-        secure=request.is_secure,
-        max_age=86400,
-    )
+    gk.set_session_cookie(response, user, lifetime_seconds=86400)
     return response
 
 
