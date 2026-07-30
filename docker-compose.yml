@@ -5,7 +5,10 @@ services:
     command: ["sh", "-c", "outbox-admin init-db && outbox-admin config import /etc/outbox/outbox.ini"]
     volumes:
       - ./instance:/data
-      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
+      # Must be read-write: the Gatekeeper client puts the database into WAL
+      # mode, which needs to create -wal and -shm files beside it. A `:ro` mount
+      # fails with "unable to open database file".
+      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data
       - ./config.ini:/etc/outbox/outbox.ini:ro
     environment:
       - OUTBOX_DB=/data/outbox.sqlite3
@@ -20,7 +23,10 @@ services:
     command: ["outbox-web"]
     volumes:
       - ./instance:/data
-      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
+      # Must be read-write: the Gatekeeper client puts the database into WAL
+      # mode, which needs to create -wal and -shm files beside it. A `:ro` mount
+      # fails with "unable to open database file".
+      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data
     environment:
       - OUTBOX_DB=/data/outbox.sqlite3
       - TZ=${TZ:-UTC}
@@ -34,7 +40,10 @@ services:
     command: ["python", "-m", "worker.queue_worker"]
     volumes:
       - ./instance:/data
-      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data:ro
+      # Must be read-write: the Gatekeeper client puts the database into WAL
+      # mode, which needs to create -wal and -shm files beside it. A `:ro` mount
+      # fails with "unable to open database file".
+      - ${GATEKEEPER_INSTANCE:-../gatekeeper/instance}:/gatekeeper-data
     environment:
       - OUTBOX_DB=/data/outbox.sqlite3
       - SMTP_HOST=${SMTP_HOST:-}
