@@ -80,11 +80,7 @@ def login() -> str | Response:
     next_url = request.args.get("next", url_for("index"))
     callback_url = url_for("auth.callback", _external=True)
 
-    return redirect(
-        f"{login_url}?app_name=Outbox"
-        f"&callback_url={callback_url}"
-        f"&next={next_url}"
-    )
+    return redirect(f"{login_url}?app_name=Outbox&callback_url={callback_url}&next={next_url}")
 
 
 @bp.route("/callback")
