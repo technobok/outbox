@@ -271,6 +271,32 @@ class Message:
         return [Message._from_row(row) for row in rows]
 
     @staticmethod
+    def reclaim_stale_sending(stale_seconds: int) -> int:
+        """Requeue messages left in 'sending' for too long.
+
+        The worker marks a message 'sending' before handing it to SMTP, and
+        get_pending_batch only looks at 'queued' and due 'failed'. So if the
+        worker dies, is restarted, or stalls mid-send, whatever was in flight
+        would sit in 'sending' forever and never be retried. Anything older
+        than the window is assumed abandoned and put back on the queue.
+
+        Returns the number of messages reclaimed.
+        """
+        from datetime import timedelta
+
+        now = datetime.now(UTC)
+        cutoff = (now - timedelta(seconds=stale_seconds)).isoformat()
+
+        with transaction() as cursor:
+            cursor.execute(
+                "UPDATE message SET status = 'queued', updated_at = ? "
+                "WHERE status = 'sending' AND updated_at <= ?",
+                (now.isoformat(), cutoff),
+            )
+            row = cursor.execute("SELECT changes()").fetchone()
+            return int(row[0]) if row else 0
+
+    @staticmethod
     def purge_old(retention_days: int) -> int:
         """Delete old sent/dead messages beyond retention period."""
         from datetime import timedelta

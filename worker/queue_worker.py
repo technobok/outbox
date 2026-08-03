@@ -37,18 +37,30 @@ def run() -> None:
     retry_base = app.config["QUEUE_RETRY_BASE_SECONDS"]
     retry_max = app.config["QUEUE_RETRY_MAX_SECONDS"]
     retention_days = app.config["RETENTION_DAYS"]
+    stale_sending = app.config["QUEUE_STALE_SENDING_SECONDS"]
 
     log.info(
-        "Worker started (poll=%ds, batch=%d, retries=%d, retention=%dd)",
+        "Worker started (poll=%ds, batch=%d, retries=%d, retention=%dd, stale=%ds)",
         poll_interval,
         batch_size,
         max_retries,
         retention_days,
+        stale_sending,
     )
+
+    # Anything still 'sending' at startup was in flight when the previous
+    # worker stopped, so it is abandoned by definition. Reclaim it before the
+    # first poll rather than waiting out the window.
+    with app.app_context():
+        try:
+            _reclaim_stale(0)
+        except Exception:
+            log.exception("Error reclaiming in-flight messages at startup")
 
     while _running:
         with app.app_context():
             try:
+                _reclaim_stale(stale_sending)
                 _process_batch(batch_size, max_retries, retry_base, retry_max)
                 _purge_old(retention_days)
             except Exception:
@@ -107,6 +119,19 @@ def _process_batch(
             else:
                 message.update_status("dead", last_error=error_msg)
                 log.warning("Message %s is dead (no retries left)", message.uuid)
+
+
+def _reclaim_stale(stale_seconds: int) -> None:
+    """Put messages abandoned mid-send back on the queue."""
+    from outbox.models.message import Message
+
+    reclaimed = Message.reclaim_stale_sending(stale_seconds)
+    if reclaimed > 0:
+        log.warning(
+            "Reclaimed %d message(s) stuck in 'sending' for over %ds",
+            reclaimed,
+            stale_seconds,
+        )
 
 
 def _purge_old(retention_days: int) -> None:

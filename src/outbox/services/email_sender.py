@@ -31,6 +31,11 @@ def send_message(message: Message) -> None:
     smtp_use_tls = current_app.config["SMTP_USE_TLS"]
     smtp_username = current_app.config["SMTP_USERNAME"]
     smtp_password = current_app.config["SMTP_PASSWORD"]
+    # Without a timeout smtplib blocks forever on a stalled socket. A relay or
+    # firewall dropping a connection mid-conversation would wedge the worker:
+    # still running, but never finishing a send and never polling again. With a
+    # timeout the stall surfaces as an ordinary exception and the caller retries.
+    smtp_timeout = current_app.config["SMTP_TIMEOUT"]
 
     if not smtp_server:
         raise RuntimeError("SMTP_SERVER not configured")
@@ -61,13 +66,13 @@ def send_message(message: Message) -> None:
 
     # Send
     if smtp_use_tls:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=smtp_timeout) as server:
             server.starttls()
             server.ehlo()
             _try_login(server, smtp_username, smtp_password)
             server.sendmail(message.from_address, all_recipients, msg.as_string())
     else:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=smtp_timeout) as server:
             _try_login(server, smtp_username, smtp_password)
             server.sendmail(message.from_address, all_recipients, msg.as_string())
 

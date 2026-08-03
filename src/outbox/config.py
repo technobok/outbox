@@ -40,6 +40,7 @@ REGISTRY: list[ConfigEntry] = [
     ConfigEntry("mail.smtp_server", ConfigType.STRING, "", "SMTP server hostname"),
     ConfigEntry("mail.smtp_port", ConfigType.INT, 587, "SMTP server port"),
     ConfigEntry("mail.smtp_use_tls", ConfigType.BOOL, True, "Use TLS for SMTP"),
+    ConfigEntry("mail.smtp_timeout", ConfigType.INT, 30, "SMTP socket timeout in seconds"),
     ConfigEntry("mail.smtp_username", ConfigType.STRING, "", "SMTP authentication username"),
     ConfigEntry(
         "mail.smtp_password", ConfigType.STRING, "", "SMTP authentication password", secret=True
@@ -53,6 +54,12 @@ REGISTRY: list[ConfigEntry] = [
     ),
     ConfigEntry("queue.retry_max_seconds", ConfigType.INT, 3600, "Maximum retry delay in seconds"),
     ConfigEntry("queue.batch_size", ConfigType.INT, 10, "Messages to process per batch"),
+    ConfigEntry(
+        "queue.stale_sending_seconds",
+        ConfigType.INT,
+        300,
+        "Requeue messages left in 'sending' for longer than this, in seconds",
+    ),
     # -- retention --
     ConfigEntry("retention.days", ConfigType.INT, 30, "Days to keep sent/dead messages"),
     # -- blobs --
@@ -126,6 +133,7 @@ KEY_MAP: dict[str, str] = {
     "mail.smtp_server": "SMTP_SERVER",
     "mail.smtp_port": "SMTP_PORT",
     "mail.smtp_use_tls": "SMTP_USE_TLS",
+    "mail.smtp_timeout": "SMTP_TIMEOUT",
     "mail.smtp_username": "SMTP_USERNAME",
     "mail.smtp_password": "SMTP_PASSWORD",
     "mail.mail_default_sender": "MAIL_DEFAULT_SENDER",
@@ -134,6 +142,7 @@ KEY_MAP: dict[str, str] = {
     "queue.retry_base_seconds": "QUEUE_RETRY_BASE_SECONDS",
     "queue.retry_max_seconds": "QUEUE_RETRY_MAX_SECONDS",
     "queue.batch_size": "QUEUE_BATCH_SIZE",
+    "queue.stale_sending_seconds": "QUEUE_STALE_SENDING_SECONDS",
     "retention.days": "RETENTION_DAYS",
     "blobs.directory": "BLOB_DIRECTORY",
     "blobs.max_size_mb": "BLOB_MAX_SIZE_MB",
@@ -161,6 +170,7 @@ INI_MAP: dict[tuple[str, str], str | None] = {
     ("mail", "SMTP_SERVER"): "mail.smtp_server",
     ("mail", "SMTP_PORT"): "mail.smtp_port",
     ("mail", "SMTP_USE_TLS"): "mail.smtp_use_tls",
+    ("mail", "SMTP_TIMEOUT"): "mail.smtp_timeout",
     ("mail", "SMTP_USERNAME"): "mail.smtp_username",
     ("mail", "SMTP_PASSWORD"): "mail.smtp_password",
     ("mail", "MAIL_DEFAULT_SENDER"): "mail.mail_default_sender",
@@ -169,6 +179,7 @@ INI_MAP: dict[tuple[str, str], str | None] = {
     ("queue", "RETRY_BASE_SECONDS"): "queue.retry_base_seconds",
     ("queue", "RETRY_MAX_SECONDS"): "queue.retry_max_seconds",
     ("queue", "BATCH_SIZE"): "queue.batch_size",
+    ("queue", "STALE_SENDING_SECONDS"): "queue.stale_sending_seconds",
     ("retention", "DAYS"): "retention.days",
     ("blobs", "DIRECTORY"): "blobs.directory",
     ("blobs", "MAX_SIZE_MB"): "blobs.max_size_mb",
