@@ -12,6 +12,8 @@ dependencies = [
     "openpyxl>=3.1",
     "click>=8.0",
     "gatekeeper",
+    # gunicorn is POSIX-only; waitress serves the app on Windows.
+    "waitress>=3.0; sys_platform == 'win32'",
 ]
 
 [project.scripts]

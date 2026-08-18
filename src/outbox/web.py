@@ -1,12 +1,14 @@
 """Web server entry point for outbox-web."""
 
+import sys
+
 import click
 
 
 @click.command()
 @click.option("--host", default=None, help="Bind address (overrides config)")
 @click.option("--port", default=None, type=int, help="Port (overrides config)")
-@click.option("--workers", default=2, help="Number of gunicorn workers")
+@click.option("--workers", default=2, help="Number of worker processes/threads")
 @click.option("--dev", is_flag=True, help="Run Flask development server with debug mode")
 def main(host: str | None, port: int | None, workers: int, dev: bool) -> None:
     """Start the Outbox web server."""
@@ -20,19 +22,28 @@ def main(host: str | None, port: int | None, workers: int, dev: bool) -> None:
         run_host = host or app.config.get("DEV_HOST", "127.0.0.1")
         run_port = port or app.config.get("DEV_PORT", 5200)
         app.run(debug=True, host=run_host, port=run_port)
-    else:
-        run_host = host or app.config.get("HOST", "0.0.0.0")
-        run_port = port or app.config.get("PORT", 5200)
+        return
 
-        import gunicorn.app.base
+    run_host = host or app.config.get("HOST", "0.0.0.0")
+    run_port = port or app.config.get("PORT", 5200)
 
-        class OutboxApp(gunicorn.app.base.BaseApplication):
-            def load_config(self) -> None:
-                self.cfg.set("bind", f"{run_host}:{run_port}")  # type: ignore[union-attr]
-                self.cfg.set("workers", str(workers))  # type: ignore[union-attr]
-                self.cfg.set("preload_app", True)  # type: ignore[union-attr]
+    if sys.platform == "win32":
+        # gunicorn is POSIX-only (it forks); waitress is the production server
+        # on Windows. --workers becomes the thread count.
+        from waitress import serve
 
-            def load(self) -> Flask:
-                return app
+        serve(app, host=run_host, port=run_port, threads=workers)
+        return
 
-        OutboxApp().run()
+    import gunicorn.app.base
+
+    class OutboxApp(gunicorn.app.base.BaseApplication):
+        def load_config(self) -> None:
+            self.cfg.set("bind", f"{run_host}:{run_port}")  # type: ignore[union-attr]
+            self.cfg.set("workers", str(workers))  # type: ignore[union-attr]
+            self.cfg.set("preload_app", True)  # type: ignore[union-attr]
+
+        def load(self) -> Flask:
+            return app
+
+    OutboxApp().run()

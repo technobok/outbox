@@ -48,6 +48,32 @@ docker compose up -d        # Starts web + worker services
 
 Data is persisted in the `outbox-data` Docker volume.
 
+### Run on Windows
+
+`gunicorn` is POSIX-only, so on Windows `outbox-web` serves the app with
+[waitress](https://pypi.org/project/waitress/) instead (installed automatically
+by `uv sync` on `win32`). `--workers` becomes the waitress thread count.
+
+Two batch files at the project root each run one process in a restart loop:
+
+```
+outbox.bat           REM web server (API + admin UI) on 0.0.0.0:5200
+outbox-worker.bat    REM SMTP delivery worker
+```
+
+**Both must be running.** The web server only accepts messages into the queue;
+without the worker nothing is ever handed to SMTP, so clients see successful
+submits and no mail arrives.
+
+Set `OUTBOX_DB` before launching if the database is not at
+`instance/outbox.sqlite3` — both processes use the same resolution order
+described above, so set it once for the machine (System → Environment
+Variables) rather than per-process.
+
+Clients on the same machine can skip the network hop entirely and use local
+mode with `db_path` (see [Client Library](#client-library)); HTTP mode is for
+clients that are not on the box holding the database.
+
 ## HTTP API
 
 All endpoints require `X-API-Key` header. Generate keys via the admin UI or `make bootstrap-key`.
