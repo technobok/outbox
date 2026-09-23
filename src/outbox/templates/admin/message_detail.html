@@ -36,6 +36,11 @@
         <strong>Bcc:</strong> {{ message.bcc_list() | join(', ') }}
     </div>
     {% endif %}
+    {% if message.reply_to_list() %}
+    <div>
+        <strong>Reply-To:</strong> {{ message.reply_to_list() | join(', ') }}
+    </div>
+    {% endif %}
 
     <div style="margin-top: 0.5rem;">
         <strong>Subject:</strong> {{ message.subject or '(no subject)' }}

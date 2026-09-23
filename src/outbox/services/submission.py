@@ -44,6 +44,7 @@ def submit_message(
     delivery_type: str = "email",
     cc: list[str] | None = None,
     bcc: list[str] | None = None,
+    reply_to: list[str] | None = None,
     source_app: str | None = None,
     source_api_key_id: int | None = None,
     max_retries: int = 5,
@@ -68,6 +69,13 @@ def submit_message(
     _refuse_line_breaks("to", to)
     _refuse_line_breaks("cc", cc)
     _refuse_line_breaks("bcc", bcc)
+    # reply_to is new, so it can have the full rule without breaking anyone
+    if reply_to is not None and not isinstance(reply_to, list):
+        raise ValueError("reply_to must be a list of email addresses")
+    for address in reply_to or []:
+        if not isinstance(address, str) or "@" not in address:
+            raise ValueError(f"reply_to address {address!r} is not an email address")
+    _refuse_line_breaks("reply_to", reply_to)
 
     max_mb = current_app.config["BLOB_MAX_SIZE_MB"]
     for att in attachments:
@@ -89,6 +97,7 @@ def submit_message(
             delivery_type=delivery_type,
             cc_recipients=cc or None,
             bcc_recipients=bcc or None,
+            reply_to=reply_to or None,
             source_app=source_app,
             source_api_key_id=source_api_key_id,
             max_retries=max_retries,

@@ -103,6 +103,11 @@ curl -X POST http://localhost:5200/api/v1/messages \
 
 Body types: `plain`, `html`, `markdown` (rendered to HTML with plain text fallback).
 
+Optional address lists: `cc`, `bcc`, and `reply_to`. `reply_to` becomes the
+`Reply-To` header, so a reply reaches the person the message is really from
+rather than a shared `from_address`; it is not a recipient. It needs a server
+at schema version 2 or later: an older server ignores the key.
+
 Attachments are supported via `attachments` array with base64-encoded content.
 
 ## Client Library
@@ -123,6 +128,7 @@ result = client.submit_message(Message(
     to=["user@example.com"],
     subject="Hello",
     body="World",
+    reply_to=["alice@example.com"],  # optional
 ))
 print(result.uuid, result.status)
 ```
@@ -162,6 +168,7 @@ The web interface (requires Gatekeeper auth) provides:
 | `make config-import FILE=...` | Import settings from an INI file |
 | `make config-export FILE=...` | Export all settings as a shell script |
 | `make check` | Run ruff (format + lint) and ty (type check) |
+| `make test` | Run the pytest suite |
 | `make clean` | Remove bytecode and the database file |
 
 ## CLI commands
@@ -176,6 +183,15 @@ outbox-admin config set KEY VAL   # Set a setting
 outbox-admin config import FILE   # Import from INI
 outbox-admin config export FILE   # Export all settings as a shell script
 ```
+
+### Schema migrations
+
+The database schema is migrated automatically: the web server, the worker,
+`init-db`, and a local-mode client each bring an existing database up to the
+current version when they open it (`outbox.db.migrate`). There is no separate
+migrate step to run. `database/schema.sql` is the version 1 baseline; later
+changes are steps in `outbox.db._MIGRATIONS`, and the applied version is in
+`db_metadata.schema_version`.
 
 ## Configuration reference
 

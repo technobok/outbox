@@ -59,6 +59,10 @@ def send_message(message: Message) -> None:
     cc = message.cc_list()
     if cc:
         msg["Cc"] = ", ".join(cc)
+    # A header only: replies go there, but the message is not sent there
+    reply_to = message.reply_to_list()
+    if reply_to:
+        msg["Reply-To"] = ", ".join(reply_to)
     msg["Subject"] = message.subject
 
     # Collect all recipients

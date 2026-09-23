@@ -181,9 +181,19 @@ def init_db_at(db_path: str) -> None:
 # LocalBackend, which writes into this database from another application and
 # so may reach it before the outbox server has been restarted.
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-_MIGRATIONS: dict[int, Callable[[apsw.Cursor], None]] = {}
+
+def _add_message_reply_to(cursor: apsw.Cursor) -> None:
+    """v2: message.reply_to, a JSON list of addresses like cc/bcc."""
+    columns = {row[1] for row in cursor.execute("PRAGMA table_info(message)")}
+    if "reply_to" not in columns:
+        cursor.execute("ALTER TABLE message ADD COLUMN reply_to TEXT")
+
+
+_MIGRATIONS: dict[int, Callable[[apsw.Cursor], None]] = {
+    2: _add_message_reply_to,
+}
 
 
 def _read_schema_version(cursor: apsw.Cursor) -> int | None:

@@ -30,6 +30,7 @@ class Message:
     delivery_type: str = "email"
     cc: list[str] = field(default_factory=list)
     bcc: list[str] = field(default_factory=list)
+    reply_to: list[str] = field(default_factory=list)
     source_app: str | None = None
     attachments: list[Attachment] = field(default_factory=list)
 

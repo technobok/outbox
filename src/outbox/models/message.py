@@ -12,7 +12,7 @@ from outbox.db import get_db, in_transaction, transaction
 _MESSAGE_COLUMNS = (
     "id, uuid, status, delivery_type, from_address, to_recipients, cc_recipients, "
     "bcc_recipients, subject, body, body_type, retries_remaining, next_retry_at, "
-    "last_error, source_app, source_api_key_id, created_at, updated_at, sent_at"
+    "last_error, source_app, source_api_key_id, created_at, updated_at, sent_at, reply_to"
 )
 
 
@@ -37,6 +37,7 @@ class Message:
     created_at: str
     updated_at: str
     sent_at: str | None
+    reply_to: str | None
 
     @staticmethod
     def _from_row(row: tuple) -> Message:
@@ -60,6 +61,7 @@ class Message:
             created_at=row[16],
             updated_at=row[17],
             sent_at=row[18],
+            reply_to=row[19],
         )
 
     def to_list(self) -> list[str]:
@@ -87,6 +89,15 @@ class Message:
         except json.JSONDecodeError, TypeError:
             return [self.bcc_recipients]
 
+    def reply_to_list(self) -> list[str]:
+        """Parse reply_to JSON into a list."""
+        if not self.reply_to:
+            return []
+        try:
+            return json.loads(self.reply_to)
+        except json.JSONDecodeError, TypeError:
+            return [self.reply_to]
+
     @staticmethod
     def create(
         from_address: str,
@@ -97,6 +108,7 @@ class Message:
         delivery_type: str = "email",
         cc_recipients: list[str] | None = None,
         bcc_recipients: list[str] | None = None,
+        reply_to: list[str] | None = None,
         source_app: str | None = None,
         source_api_key_id: int | None = None,
         max_retries: int = 5,
@@ -112,14 +124,15 @@ class Message:
         to_json = json.dumps(to_recipients)
         cc_json = json.dumps(cc_recipients) if cc_recipients else None
         bcc_json = json.dumps(bcc_recipients) if bcc_recipients else None
+        reply_to_json = json.dumps(reply_to) if reply_to else None
 
         with in_transaction(cursor) as cursor:
             cursor.execute(
                 "INSERT INTO message "
                 "(uuid, status, delivery_type, from_address, to_recipients, cc_recipients, "
                 "bcc_recipients, subject, body, body_type, retries_remaining, "
-                "source_app, source_api_key_id, created_at, updated_at) "
-                "VALUES (?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "source_app, source_api_key_id, created_at, updated_at, reply_to) "
+                "VALUES (?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     msg_uuid,
                     delivery_type,
@@ -135,6 +148,7 @@ class Message:
                     source_api_key_id,
                     now,
                     now,
+                    reply_to_json,
                 ),
             )
             row = cursor.execute("SELECT last_insert_rowid()").fetchone()
@@ -160,6 +174,7 @@ class Message:
             created_at=now,
             updated_at=now,
             sent_at=None,
+            reply_to=reply_to_json,
         )
 
     @staticmethod

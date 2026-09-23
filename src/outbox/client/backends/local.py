@@ -64,6 +64,7 @@ class LocalBackend:
         to_json = json.dumps(message.to)
         cc_json = json.dumps(message.cc) if message.cc else None
         bcc_json = json.dumps(message.bcc) if message.bcc else None
+        reply_to_json = json.dumps(message.reply_to) if message.reply_to else None
 
         conn = self._connect()
         try:
@@ -93,8 +94,8 @@ class LocalBackend:
                     "INSERT INTO message "
                     "(uuid, status, delivery_type, from_address, to_recipients, cc_recipients, "
                     "bcc_recipients, subject, body, body_type, retries_remaining, "
-                    "source_app, created_at, updated_at) "
-                    "VALUES (?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?, 5, ?, ?, ?)",
+                    "source_app, created_at, updated_at, reply_to) "
+                    "VALUES (?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?, 5, ?, ?, ?, ?)",
                     (
                         msg_uuid,
                         message.delivery_type,
@@ -108,6 +109,7 @@ class LocalBackend:
                         message.source_app,
                         now,
                         now,
+                        reply_to_json,
                     ),
                 )
                 msg_id = conn.last_insert_rowid()

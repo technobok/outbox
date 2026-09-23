@@ -35,6 +35,8 @@ class HttpBackend:
             payload["cc"] = message.cc
         if message.bcc:
             payload["bcc"] = message.bcc
+        if message.reply_to:
+            payload["reply_to"] = message.reply_to
         if message.source_app:
             payload["source_app"] = message.source_app
         if message.attachments:
