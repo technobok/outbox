@@ -63,6 +63,25 @@ def admin_required(f: Callable[..., Any]) -> Callable[..., Any]:
     return decorated
 
 
+def whoami_url() -> str:
+    """Gatekeeper's account page, where people see who they are signed in as.
+
+    It sits beside gatekeeper's login page, so it is derived from the login URL
+    gatekeeper reports, falling back to where Caddy serves it.
+    """
+    gk = _get_gk()
+    login_url = gk.get_login_url() if gk else None
+    if login_url and login_url.endswith("/auth/login"):
+        return login_url.removesuffix("/login") + "/whoami"
+    return "/gatekeeper/auth/whoami"
+
+
+@bp.app_context_processor
+def _inject_whoami_url() -> dict[str, Any]:
+    # the function, not its value: only the nav of a signed-in page calls it
+    return {"whoami_url": whoami_url}
+
+
 @bp.route("/login")
 def login() -> str | Response:
     """Redirect to Gatekeeper SSO login, or show fallback page."""

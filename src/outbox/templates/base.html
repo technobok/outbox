@@ -21,7 +21,7 @@
                 <li><a href="{{ url_for('admin_queue.index') }}">Queue</a></li>
                 <li><a href="{{ url_for('admin_keys.index') }}">API Keys</a></li>
                 <li><a href="{{ url_for('admin_sql.index') }}">SQL</a></li>
-                <li><small>{{ g.user.username }}</small></li>
+                <li><a href="{{ whoami_url() }}" title="Your account">{{ g.user.username }}</a></li>
                 <li>
                     <form method="post" action="{{ url_for('auth.logout') }}" style="display:inline; margin:0;">
                         <button type="submit" class="linklike">Logout</button>
