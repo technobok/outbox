@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}New Message - Outbox{% endblock %}
+
+{% block content %}
+<h1>New Message</h1>
+<p><small>Queue a message by hand to test delivery. Separate addresses with commas, semicolons or new lines.</small></p>
+
+<form method="post" action="{{ url_for('admin_queue.compose') }}" enctype="multipart/form-data">
+    <article>
+        <label>
+            From
+            <input type="text" name="from_address" value="{{ form.get('from_address', '') }}" required>
+        </label>
+        <label>
+            To
+            <input type="text" name="to" value="{{ form.get('to', '') }}" required>
+        </label>
+        <div class="grid">
+            <label>
+                Cc
+                <input type="text" name="cc" value="{{ form.get('cc', '') }}">
+            </label>
+            <label>
+                Bcc
+                <input type="text" name="bcc" value="{{ form.get('bcc', '') }}">
+            </label>
+        </div>
+        <label>
+            Reply-To
+            <input type="text" name="reply_to" value="{{ form.get('reply_to', '') }}">
+            <small>Where replies go, when that is not the From address.</small>
+        </label>
+        <label>
+            Subject
+            <input type="text" name="subject" value="{{ form.get('subject', '') }}">
+        </label>
+        <label>
+            Body
+            <textarea name="body" rows="10">{{ form.get('body', '') }}</textarea>
+        </label>
+        <div class="grid">
+            <label>
+                Body type
+                <select name="body_type">
+                    {% for bt in body_types %}
+                    <option value="{{ bt }}"{% if form.get('body_type', 'plain') == bt %} selected{% endif %}>{{ bt }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                Delivery type
+                <select name="delivery_type">
+                    <option value="email" selected>email</option>
+                </select>
+            </label>
+            <label>
+                Source app
+                <input type="text" name="source_app" value="{{ form.get('source_app', '') }}">
+            </label>
+            <label>
+                Max retries
+                <input type="number" name="max_retries" min="1" value="{{ form.get('max_retries', '') }}">
+            </label>
+        </div>
+        <label>
+            Attachments
+            <input type="file" name="attachments" multiple>
+            {% if request.method == 'POST' %}
+            <small>Files are not kept when a submission is refused: choose them again.</small>
+            {% endif %}
+        </label>
+        <footer>
+            <div role="group">
+                <button type="submit">Send</button>
+                <button type="button" class="outline" onclick="location.href='{{ url_for('admin_queue.index') }}'">Cancel</button>
+            </div>
+        </footer>
+    </article>
+</form>
+{% endblock %}

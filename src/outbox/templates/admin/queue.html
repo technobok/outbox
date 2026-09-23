@@ -24,7 +24,10 @@
 </div>
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
-    <div></div>
+    <button type="button"
+            onclick="location.href='{{ url_for('admin_queue.compose') }}'">
+        New message
+    </button>
     <button type="button" class="secondary outline"
             onclick="location.href='{{ url_for('admin_queue.export', status=status, search=search) }}'">
         Export

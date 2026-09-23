@@ -1,12 +1,27 @@
 """Admin blueprint for queue browser (HTMX)."""
 
-from flask import Blueprint, flash, g, redirect, render_template, request, send_file, url_for
+import json
+import re
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
 from werkzeug.wrappers import Response
 
 from outbox.blueprints.auth import login_required
 from outbox.db import get_db
 from outbox.models.attachment import Attachment
 from outbox.models.message import Message
+from outbox.services.submission import BODY_TYPES, NewAttachment, submit_message
 
 bp = Blueprint("admin_queue", __name__, url_prefix="/admin/queue")
 
@@ -89,6 +104,71 @@ def export() -> Response:
     path = write_xlsx(headers, data, "queue.xlsx")
     _audit_log("queue_exported", details=f"{len(data)} messages exported")
     return send_file(path, as_attachment=True, download_name="queue.xlsx")
+
+
+def _split_addresses(text: str) -> list[str]:
+    """Addresses typed into one box, separated by commas, semicolons or lines."""
+    return [a.strip() for a in re.split(r"[,;\r\n]+", text) if a.strip()]
+
+
+@bp.route("/new", methods=["GET", "POST"])
+@login_required
+def compose() -> str | Response | tuple[str, int]:
+    """Build a message by hand and put it on the queue, for testing delivery."""
+    default_retries = current_app.config["QUEUE_MAX_RETRIES"]
+    if request.method == "GET":
+        form = {
+            "from_address": session.get("compose_from", ""),
+            "source_app": "outbox-admin",
+            "max_retries": str(default_retries),
+        }
+        return render_template("admin/compose.html", form=form, body_types=BODY_TYPES)
+
+    form = request.form.to_dict()
+    try:
+        try:
+            max_retries = int(form.get("max_retries") or default_retries)
+        except ValueError:
+            raise ValueError("Max retries must be a whole number") from None
+        if max_retries < 1:
+            raise ValueError("Max retries must be at least 1")
+
+        attachments = [
+            NewAttachment(
+                filename=f.filename,
+                content_type=f.mimetype or "application/octet-stream",
+                data=f.read(),
+            )
+            for f in request.files.getlist("attachments")
+            if f.filename
+        ]
+        to = _split_addresses(form.get("to", ""))
+        message = submit_message(
+            from_address=form.get("from_address", "").strip(),
+            to=to,
+            cc=_split_addresses(form.get("cc", "")),
+            bcc=_split_addresses(form.get("bcc", "")),
+            reply_to=_split_addresses(form.get("reply_to", "")),
+            subject=form.get("subject", ""),
+            body=form.get("body", ""),
+            body_type=form.get("body_type", "plain"),
+            delivery_type=form.get("delivery_type", "email"),
+            source_app=form.get("source_app", "").strip() or None,
+            max_retries=max_retries,
+            attachments=attachments,
+        )
+    except ValueError as e:
+        flash(str(e), "error")
+        return render_template("admin/compose.html", form=form, body_types=BODY_TYPES), 400
+
+    session["compose_from"] = message.from_address
+    _audit_log(
+        "message_submitted",
+        message.uuid,
+        json.dumps({"to": to, "subject": message.subject, "via": "admin compose"}),
+    )
+    flash("Message queued.", "success")
+    return redirect(url_for("admin_queue.detail", msg_uuid=message.uuid))
 
 
 @bp.route("/<msg_uuid>")
