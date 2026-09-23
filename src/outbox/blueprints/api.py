@@ -12,7 +12,7 @@ from werkzeug.wrappers import Response
 from outbox.db import get_db
 from outbox.models.api_key import ApiKey
 from outbox.models.message import Message
-from outbox.services.attachment_service import save_attachment
+from outbox.services import submission
 
 bp = Blueprint("api", __name__, url_prefix="/api/v1")
 
@@ -56,51 +56,44 @@ def submit_message() -> Response | tuple[Response, int]:
     if not data:
         return jsonify({"error": "Invalid JSON body"}), 400
 
-    from_address = data.get("from_address", "").strip()
     to = data.get("to")
     subject = data.get("subject", "")
-    body = data.get("body", "")
-    body_type = data.get("body_type", "plain")
-    delivery_type = data.get("delivery_type", "email")
-    cc = data.get("cc")
-    bcc = data.get("bcc")
-    source_app = data.get("source_app")
-    attachments_data = data.get("attachments", [])
 
-    if not from_address:
-        return jsonify({"error": "from_address is required"}), 400
-    if not to or not isinstance(to, list) or len(to) == 0:
-        return jsonify({"error": "to must be a non-empty list of email addresses"}), 400
-    if body_type not in ("plain", "html", "markdown"):
-        return jsonify({"error": "body_type must be plain, html, or markdown"}), 400
-
-    message = Message.create(
-        from_address=from_address,
-        to_recipients=to,
-        subject=subject,
-        body=body,
-        body_type=body_type,
-        delivery_type=delivery_type,
-        cc_recipients=cc if cc else None,
-        bcc_recipients=bcc if bcc else None,
-        source_app=source_app,
-        source_api_key_id=g.api_key.id,
-    )
-
-    # Handle attachments
-    for att_data in attachments_data:
+    # Decode every attachment before anything is queued
+    attachments: list[submission.NewAttachment] = []
+    for att_data in data.get("attachments", []):
         filename = att_data.get("filename", "attachment")
-        content_type = att_data.get("content_type", "application/octet-stream")
         content_b64 = att_data.get("content_base64", "")
-        if content_b64:
-            try:
-                raw_data = base64.b64decode(content_b64)
-            except Exception:
-                return jsonify({"error": f"Invalid base64 in attachment '{filename}'"}), 400
-            try:
-                save_attachment(message.id, filename, content_type, raw_data)
-            except ValueError as e:
-                return jsonify({"error": str(e)}), 400
+        if not content_b64:
+            continue
+        try:
+            raw_data = base64.b64decode(content_b64)
+        except Exception:
+            return jsonify({"error": f"Invalid base64 in attachment '{filename}'"}), 400
+        attachments.append(
+            submission.NewAttachment(
+                filename=filename,
+                content_type=att_data.get("content_type", "application/octet-stream"),
+                data=raw_data,
+            )
+        )
+
+    try:
+        message = submission.submit_message(
+            from_address=data.get("from_address", "").strip(),
+            to=to,
+            subject=subject,
+            body=data.get("body", ""),
+            body_type=data.get("body_type", "plain"),
+            delivery_type=data.get("delivery_type", "email"),
+            cc=data.get("cc"),
+            bcc=data.get("bcc"),
+            source_app=data.get("source_app"),
+            source_api_key_id=g.api_key.id,
+            attachments=attachments,
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     _audit_log("message_submitted", message.uuid, json.dumps({"to": to, "subject": subject}))
 

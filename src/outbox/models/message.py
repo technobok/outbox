@@ -5,7 +5,9 @@ import uuid as uuid_mod
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from outbox.db import get_db, transaction
+import apsw
+
+from outbox.db import get_db, in_transaction, transaction
 
 _MESSAGE_COLUMNS = (
     "id, uuid, status, delivery_type, from_address, to_recipients, cc_recipients, "
@@ -98,15 +100,20 @@ class Message:
         source_app: str | None = None,
         source_api_key_id: int | None = None,
         max_retries: int = 5,
+        cursor: apsw.Cursor | None = None,
     ) -> Message:
-        """Create a new message in the queue."""
+        """Create a new message in the queue.
+
+        With a cursor the insert joins the caller's transaction; without one
+        it commits on its own.
+        """
         msg_uuid = str(uuid_mod.uuid4())
         now = datetime.now(UTC).isoformat()
         to_json = json.dumps(to_recipients)
         cc_json = json.dumps(cc_recipients) if cc_recipients else None
         bcc_json = json.dumps(bcc_recipients) if bcc_recipients else None
 
-        with transaction() as cursor:
+        with in_transaction(cursor) as cursor:
             cursor.execute(
                 "INSERT INTO message "
                 "(uuid, status, delivery_type, from_address, to_recipients, cc_recipients, "

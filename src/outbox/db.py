@@ -126,6 +126,16 @@ def transaction() -> Generator[apsw.Cursor]:
         raise
 
 
+@contextmanager
+def in_transaction(cursor: apsw.Cursor | None) -> Generator[apsw.Cursor]:
+    """Join the caller's transaction when given its cursor, else open one."""
+    if cursor is not None:
+        yield cursor
+        return
+    with transaction() as own:
+        yield own
+
+
 # ---------------------------------------------------------------------------
 # Schema initialisation
 # ---------------------------------------------------------------------------

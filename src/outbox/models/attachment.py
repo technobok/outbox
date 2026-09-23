@@ -3,7 +3,9 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from outbox.db import get_db, transaction
+import apsw
+
+from outbox.db import get_db, in_transaction
 
 _ATTACHMENT_COLUMNS = (
     "id, message_id, filename, content_type, size_bytes, sha256, disk_path, created_at"
@@ -42,11 +44,16 @@ class Attachment:
         size_bytes: int,
         sha256: str,
         disk_path: str,
+        cursor: apsw.Cursor | None = None,
     ) -> Attachment:
-        """Create a new attachment record."""
+        """Create a new attachment record.
+
+        With a cursor the insert joins the caller's transaction; without one
+        it commits on its own.
+        """
         now = datetime.now(UTC).isoformat()
 
-        with transaction() as cursor:
+        with in_transaction(cursor) as cursor:
             cursor.execute(
                 "INSERT INTO attachment "
                 "(message_id, filename, content_type, size_bytes, sha256, disk_path, created_at) "
