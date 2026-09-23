@@ -1,6 +1,6 @@
 """Database connection and transaction handling using APSW."""
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -156,7 +156,80 @@ def init_db_at(db_path: str) -> None:
             ("secret_key", new_key, "Secret key for signing auth tokens"),
         )
 
+    migrate(conn)
     conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Schema migrations
+# ---------------------------------------------------------------------------
+#
+# database/schema.sql is the version 1 baseline and is never edited. Every
+# later change is a step here, and migrate() brings any database - fresh from
+# init-db or years old - up to SCHEMA_VERSION. It runs wherever the database is
+# opened for writing: create_app (web, worker, CLI), init-db, and the client's
+# LocalBackend, which writes into this database from another application and
+# so may reach it before the outbox server has been restarted.
+
+SCHEMA_VERSION = 1
+
+_MIGRATIONS: dict[int, Callable[[apsw.Cursor], None]] = {}
+
+
+def _read_schema_version(cursor: apsw.Cursor) -> int | None:
+    """The recorded schema version, or None for an uninitialised database."""
+    try:
+        row = cursor.execute(
+            "SELECT value FROM db_metadata WHERE key = 'schema_version'"
+        ).fetchone()
+    except apsw.SQLError:
+        return None
+    return int(str(row[0])) if row else None
+
+
+def migrate(conn: apsw.Connection) -> None:
+    """Apply any schema migrations the database has not yet had.
+
+    A database with no db_metadata table has not been initialised; that is
+    init-db's job, so it is left alone.
+    """
+    cursor = conn.cursor()
+    version = _read_schema_version(cursor)
+    if version is None or version >= SCHEMA_VERSION:
+        return
+
+    # web, worker and LocalBackend clients can all start at once: take the
+    # write lock, then read the version again - another process may have
+    # migrated in between.
+    cursor.execute("BEGIN IMMEDIATE;")
+    try:
+        version = _read_schema_version(cursor)
+        if version is not None and version < SCHEMA_VERSION:
+            for step in range(version + 1, SCHEMA_VERSION + 1):
+                _MIGRATIONS[step](cursor)
+            cursor.execute(
+                "UPDATE db_metadata SET value = ? WHERE key = 'schema_version'",
+                (str(SCHEMA_VERSION),),
+            )
+        cursor.execute("COMMIT;")
+    except Exception:
+        cursor.execute("ROLLBACK;")
+        raise
+
+
+def migrate_db_at(db_path: str) -> None:
+    """Migrate the database at db_path, if one exists there.
+
+    A missing file means init-db hasn't been run; it migrates what it creates.
+    """
+    if not Path(db_path).exists():
+        return
+    conn = apsw.Connection(db_path)
+    try:
+        _configure_connection(conn)
+        migrate(conn)
+    finally:
+        conn.close()
 
 
 def init_db() -> None:

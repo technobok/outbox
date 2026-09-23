@@ -1,11 +1,14 @@
 """Attachment storage service with SHA256 deduplication."""
 
-import hashlib
-from pathlib import Path
-
 from flask import current_app
 
+from outbox.blobs import resolve_blob_dir, store_blob
 from outbox.models.attachment import Attachment
+
+
+def _existing_disk_path(sha256: str) -> str | None:
+    existing = Attachment.find_by_sha256(sha256)
+    return existing.disk_path if existing else None
 
 
 def save_attachment(
@@ -19,7 +22,9 @@ def save_attachment(
     Uses SHA256 deduplication: if the same content already exists on disk,
     reuses the existing file path.
     """
-    blob_dir = Path(current_app.config["BLOB_DIRECTORY"])
+    blob_dir = resolve_blob_dir(
+        current_app.config["DATABASE_PATH"], current_app.config["BLOB_DIRECTORY"]
+    )
     max_size = current_app.config["BLOB_MAX_SIZE_MB"] * 1024 * 1024
 
     if len(data) > max_size:
@@ -28,20 +33,7 @@ def save_attachment(
             f"(max {current_app.config['BLOB_MAX_SIZE_MB']} MB)"
         )
 
-    sha256 = hashlib.sha256(data).hexdigest()
-
-    # Check for existing file with same hash
-    existing = Attachment.find_by_sha256(sha256)
-    if existing and Path(existing.disk_path).exists():
-        disk_path = existing.disk_path
-    else:
-        # Store in subdirectory based on first 2 chars of hash
-        sub_dir = blob_dir / sha256[:2]
-        sub_dir.mkdir(parents=True, exist_ok=True)
-        disk_path = str(sub_dir / sha256)
-
-        with open(disk_path, "wb") as f:
-            f.write(data)
+    sha256, disk_path = store_blob(blob_dir, data, _existing_disk_path)
 
     return Attachment.create(
         message_id=message_id,

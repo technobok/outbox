@@ -7,7 +7,14 @@ from pathlib import Path
 
 import apsw
 
+from outbox.blobs import resolve_blob_dir, store_blob
 from outbox.client.models import Message, MessageResult
+from outbox.config import resolve_entry, serialize_value
+from outbox.db import migrate
+
+# Databases already migrated by this process. A client is often built per
+# message, so this keeps it to one version check per database, not per send.
+_migrated: set[str] = set()
 
 
 def _opt_str(val: object) -> str | None:
@@ -37,7 +44,19 @@ class LocalBackend:
         conn.execute("PRAGMA busy_timeout = 5000;")
         conn.execute("PRAGMA foreign_keys = ON;")
         conn.execute("PRAGMA journal_mode = WAL;")
+        if self.db_path not in _migrated:
+            # this client may be newer than the outbox server that owns the
+            # database, and reach it before the server has been restarted
+            migrate(conn)
+            _migrated.add(self.db_path)
         return conn
+
+    def _setting(self, conn: apsw.Connection, key: str) -> str:
+        """The effective raw value of a setting, as the outbox server would see it."""
+        entry = resolve_entry(key)
+        assert entry is not None, key
+        row = conn.execute("SELECT value FROM app_setting WHERE key = ?", (key,)).fetchone()
+        return str(row[0]) if row else serialize_value(entry, entry.default)
 
     def submit_message(self, message: Message) -> MessageResult:
         msg_uuid = str(uuid_mod.uuid4())
@@ -48,7 +67,26 @@ class LocalBackend:
 
         conn = self._connect()
         try:
+            blob_dir = resolve_blob_dir(self.db_path, self._setting(conn, "blobs.directory"))
+            max_mb = int(self._setting(conn, "blobs.max_size_mb"))
+            # Refuse before anything is written, as the server does
+            for att in message.attachments:
+                if len(att.data) > max_mb * 1024 * 1024:
+                    raise ValueError(
+                        f"Attachment too large: {att.filename} is {len(att.data)} bytes "
+                        f"(max {max_mb} MB)"
+                    )
+
             cursor = conn.cursor()
+
+            def existing_disk_path(sha256: str) -> str | None:
+                row = cursor.execute(
+                    "SELECT disk_path FROM attachment WHERE sha256 = ? LIMIT 1", (sha256,)
+                ).fetchone()
+                return str(row[0]) if row else None
+
+            # The message and its attachment rows commit together: the worker
+            # must never find a queued message whose attachments are not there.
             cursor.execute("BEGIN IMMEDIATE;")
             try:
                 cursor.execute(
@@ -72,6 +110,23 @@ class LocalBackend:
                         now,
                     ),
                 )
+                msg_id = conn.last_insert_rowid()
+                for att in message.attachments:
+                    sha256, disk_path = store_blob(blob_dir, att.data, existing_disk_path)
+                    cursor.execute(
+                        "INSERT INTO attachment "
+                        "(message_id, filename, content_type, size_bytes, sha256, disk_path, "
+                        "created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            msg_id,
+                            att.filename,
+                            att.content_type,
+                            len(att.data),
+                            sha256,
+                            disk_path,
+                            now,
+                        ),
+                    )
                 cursor.execute("COMMIT;")
             except Exception:
                 cursor.execute("ROLLBACK;")

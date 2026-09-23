@@ -1,4 +1,7 @@
 -- Outbox Mail Queue Service Schema
+--
+-- This is the version 1 baseline and is not edited: later changes are steps in
+-- outbox.db._MIGRATIONS, which migrate() applies on top of it.
 
 CREATE TABLE IF NOT EXISTS db_metadata (
     key TEXT PRIMARY KEY,

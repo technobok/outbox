@@ -200,7 +200,7 @@ All settings are stored in the SQLite database (`app_setting` table) and managed
 | `queue.retry_max_seconds` | int | `3600` | Maximum retry delay (seconds) |
 | `queue.batch_size` | int | `10` | Messages to process per batch |
 | `retention.days` | int | `30` | Days to keep sent/dead messages |
-| `blobs.directory` | string | `instance/blobs` | Blob storage directory path |
+| `blobs.directory` | string | `blobs` | Blob storage directory; a relative path is relative to the database's directory (the legacy `instance/blobs` means the same place) |
 | `blobs.max_size_mb` | int | `25` | Maximum blob size in MB |
 | `gatekeeper.db_path` | string | | Path to Gatekeeper SQLite database (local mode) |
 | `gatekeeper.url` | string | | Gatekeeper HTTP API base URL (remote mode) |

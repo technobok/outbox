@@ -48,6 +48,9 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     if test_config is not None:
         app.config.from_mapping(test_config)
     else:
+        from outbox.db import migrate_db_at
+
+        migrate_db_at(app.config["DATABASE_PATH"])
         _load_config_from_db(app)
 
     from outbox.db import close_db

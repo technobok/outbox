@@ -63,7 +63,12 @@ REGISTRY: list[ConfigEntry] = [
     # -- retention --
     ConfigEntry("retention.days", ConfigType.INT, 30, "Days to keep sent/dead messages"),
     # -- blobs --
-    ConfigEntry("blobs.directory", ConfigType.STRING, "instance/blobs", "Blob storage directory"),
+    ConfigEntry(
+        "blobs.directory",
+        ConfigType.STRING,
+        "blobs",
+        "Blob storage directory (a relative path is relative to the database's directory)",
+    ),
     ConfigEntry("blobs.max_size_mb", ConfigType.INT, 25, "Maximum blob size in MB"),
     # -- gatekeeper --
     ConfigEntry("gatekeeper.db_path", ConfigType.STRING, "", "Path to Gatekeeper SQLite database"),

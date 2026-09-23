@@ -1,10 +1,11 @@
-.PHONY: help sync install init-db bootstrap-key run rundev worker check clean config-list config-set config-import config-export docker-up docker-down
+.PHONY: help sync install init-db bootstrap-key run rundev worker check test clean config-list config-set config-import config-export docker-up docker-down
 
 SHELL := /bin/bash
 VENV_DIR := $(or $(VIRTUAL_ENV),.venv)
 ADMIN := $(VENV_DIR)/bin/outbox-admin
 WEB := $(VENV_DIR)/bin/outbox-web
 PYTHON := $(VENV_DIR)/bin/python
+PYTEST := $(VENV_DIR)/bin/pytest
 GUNICORN := $(VENV_DIR)/bin/gunicorn
 RUFF := $(VENV_DIR)/bin/ruff
 TY := $(VENV_DIR)/bin/ty
@@ -25,6 +26,7 @@ help:
 	@echo "config-import FILE=path  - Import settings from INI file"
 	@echo "config-export FILE=path  - Export all settings as a shell script"
 	@echo "check    - Run ruff and ty for code quality"
+	@echo "test     - Run the pytest suite"
 	@echo "clean    - Remove temporary files and database"
 	@echo ""
 	@echo "Database: instance/outbox.sqlite3 (default)"
@@ -64,9 +66,12 @@ config-export:
 	@$(ADMIN) config export $(or $(FILE),$(file))
 
 check:
-	@$(RUFF) format src
-	@$(RUFF) check src --fix
+	@$(RUFF) format src tests
+	@$(RUFF) check src tests --fix
 	@if [ -z "$$VIRTUAL_ENV" ]; then unset VIRTUAL_ENV; fi; $(TY) check src
+
+test:
+	@$(PYTEST) -q tests
 
 docker-up:
 	@test -f config.ini || { echo "Error: config.ini not found — copy from config.ini.example first"; exit 1; }
